@@ -35,4 +35,19 @@ public class TransactionRepository : GenericRepository<Transaction>, ITransactio
         if (year.HasValue) query = query.Where(t => t.CreatedAt.Year == year.Value);
         return await query.SumAsync(t => t.Amount);
     }
+
+    public async Task<decimal> GetUserBalanceAsync(int userId)
+    {
+        // Calculate user balance from all successful transactions
+        var deposits = await _context.Transactions
+            .Where(t => t.UserId == userId && (t.Type == "Deposit" || t.Type == "Refund") && t.Status == "Success")
+            .SumAsync(t => (decimal?)t.Amount) ?? 0;
+
+        var payments = await _context.Transactions
+            .Where(t => t.UserId == userId && t.Type == "TuitionPayment" && t.Status == "Success")
+            .SumAsync(t => (decimal?)t.Amount) ?? 0;
+
+        var balance = deposits - payments;
+        return Math.Max(0, balance);  // Ensure non-negative
+    }
 }

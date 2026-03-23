@@ -9,4 +9,5 @@ public interface ITransactionRepository : IGenericRepository<Transaction>
     Task<Transaction?> GetByReferenceCodeAsync(string referenceCode);
     Task<IEnumerable<Transaction>> GetByDateRangeAsync(DateTime from, DateTime to);
     Task<decimal> GetTotalRevenueAsync(int? month = null, int? year = null);
+    Task<decimal> GetUserBalanceAsync(int userId);
 }

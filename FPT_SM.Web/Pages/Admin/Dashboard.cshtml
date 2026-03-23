@@ -9,7 +9,7 @@
 <!-- Stats Cards -->
 <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5 mb-8">
     <!-- Tổng người dùng -->
-    <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 hover:shadow-md transition-shadow" data-aos="fade-up" data-aos-delay="0">
+    <a href="/Admin/Users" class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 hover:shadow-md transition-all hover:scale-105 cursor-pointer" data-aos="fade-up" data-aos-delay="0">
         <div class="flex items-center justify-between mb-3">
             <div class="w-11 h-11 bg-fpt-navy/10 rounded-xl flex items-center justify-center">
                 <i data-lucide="users" class="w-5 h-5 text-fpt-navy"></i>
@@ -19,10 +19,10 @@
         <p class="text-slate-500 text-sm font-medium">Tổng người dùng</p>
         <p class="text-3xl font-black text-fpt-navy mt-1">@(data?.TotalUsers.ToString("N0") ?? "—")</p>
         <p class="text-xs text-slate-400 mt-1">@(data?.TotalStudents ?? 0) sinh viên · @(data?.TotalTeachers ?? 0) giáo viên</p>
-    </div>
+    </a>
 
     <!-- Học kỳ đang mở -->
-    <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 hover:shadow-md transition-shadow" data-aos="fade-up" data-aos-delay="80">
+    <a href="/Admin/Semesters" class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 hover:shadow-md transition-all hover:scale-105 cursor-pointer" data-aos="fade-up" data-aos-delay="80">
         <div class="flex items-center justify-between mb-3">
             <div class="w-11 h-11 bg-sky-100 rounded-xl flex items-center justify-center">
                 <i data-lucide="calendar" class="w-5 h-5 text-sky-500"></i>
@@ -32,10 +32,10 @@
         <p class="text-slate-500 text-sm font-medium">Học kỳ đang mở</p>
         <p class="text-3xl font-black text-sky-600 mt-1">@(data?.ActiveSemesters ?? 0)</p>
         <p class="text-xs text-slate-400 mt-1">Học kỳ đang diễn ra</p>
-    </div>
+    </a>
 
     <!-- Tổng lớp học -->
-    <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 hover:shadow-md transition-shadow" data-aos="fade-up" data-aos-delay="160">
+    <a href="/Admin/Classes" class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 hover:shadow-md transition-all hover:scale-105 cursor-pointer" data-aos="fade-up" data-aos-delay="160">
         <div class="flex items-center justify-between mb-3">
             <div class="w-11 h-11 bg-fpt-orange/10 rounded-xl flex items-center justify-center">
                 <i data-lucide="graduation-cap" class="w-5 h-5 text-fpt-orange"></i>
@@ -45,10 +45,10 @@
         <p class="text-slate-500 text-sm font-medium">Tổng lớp học</p>
         <p class="text-3xl font-black text-fpt-orange mt-1">@(data?.TotalClasses.ToString("N0") ?? "—")</p>
         <p class="text-xs text-slate-400 mt-1">@(data?.OngoingClasses ?? 0) lớp đang học</p>
-    </div>
+    </a>
 
     <!-- Sinh viên đang học -->
-    <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 hover:shadow-md transition-shadow" data-aos="fade-up" data-aos-delay="240">
+    <a href="/Admin/Classes" class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 hover:shadow-md transition-all hover:scale-105 cursor-pointer" data-aos="fade-up" data-aos-delay="240">
         <div class="flex items-center justify-between mb-3">
             <div class="w-11 h-11 bg-teal-100 rounded-xl flex items-center justify-center">
                 <i data-lucide="book-open" class="w-5 h-5 text-teal-500"></i>
@@ -58,7 +58,7 @@
         <p class="text-slate-500 text-sm font-medium">Sinh viên đang học</p>
         <p class="text-3xl font-black text-teal-600 mt-1">@(data?.TotalEnrollments.ToString("N0") ?? "—")</p>
         <p class="text-xs text-slate-400 mt-1">Tổng lượt đăng ký môn học</p>
-    </div>
+    </a>
 </div>
 
 <!-- Revenue Banner -->

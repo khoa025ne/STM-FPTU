@@ -25,9 +25,12 @@ public class IndexModel : BasePageModel
     public WalletDto? Wallet { get; set; }
     public List<TransactionDto> Transactions { get; set; } = new();
     public int TotalTransactions { get; set; }
+    public decimal TotalDepositsAmount { get; set; }
+    public decimal TotalPaymentsAmount { get; set; }
 
     [BindProperty(SupportsGet = true)]
-    public int CurrentPage { get; set; } = 1;
+    public int Page { get; set; } = 1;
+    public int CurrentPage => Page > 0 ? Page : 1;
 
     public int PageSize { get; set; } = 10;
 
@@ -46,6 +49,15 @@ public class IndexModel : BasePageModel
         Wallet = await _walletService.GetWalletAsync(userId);
         Transactions = await _walletService.GetTransactionsAsync(userId, CurrentPage, PageSize);
         TotalTransactions = await _walletService.GetTransactionCountAsync(userId);
+        
+        // Get totals from ALL transactions, not just current page
+        var allTransactions = await _walletService.GetTransactionsAsync(userId, 1, int.MaxValue);
+        TotalDepositsAmount = allTransactions
+            .Where(t => (t.Type == "Deposit" || t.Type == "Refund") && t.Status == "Success")
+            .Sum(t => t.Amount);
+        TotalPaymentsAmount = allTransactions
+            .Where(t => t.Type == "TuitionPayment" && t.Status == "Success")
+            .Sum(t => t.Amount);
 
         if (TempData.ContainsKey("SuccessMessage"))
             ViewData["SuccessMessage"] = TempData["SuccessMessage"];

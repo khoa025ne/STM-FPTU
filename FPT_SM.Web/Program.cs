@@ -50,8 +50,8 @@ using (var scope = app.Services.CreateScope())
 
     if (app.Environment.IsDevelopment())
     {
-        // Skip auto-reset to preserve payment transactions and test data
-        // await db.Database.EnsureDeletedAsync();
+        // Reset database to ensure schema matches current entities
+        await db.Database.EnsureDeletedAsync();
         await db.Database.EnsureCreatedAsync();
     }
     else
@@ -63,5 +63,4 @@ using (var scope = app.Services.CreateScope())
     await DbSeeder.SeedAsync(scope.ServiceProvider);
 }
 
-app.Urls.Add("http://localhost:5008");
 app.Run();

@@ -111,13 +111,13 @@
                 <div class="flex justify-between items-center text-sm">
                     <span class="text-slate-500">Đã nạp</span>
                     <span class="font-bold text-teal-600">
-                        @(Model.Transactions.Where(t => t.Type == "Deposit" && t.Status == "Success").Sum(t => t.Amount).ToString("N0")) ₫
+                        @Model.TotalDepositsAmount.ToString("N0") ₫
                     </span>
                 </div>
                 <div class="flex justify-between items-center text-sm">
                     <span class="text-slate-500">Đã thanh toán</span>
                     <span class="font-bold text-fpt-orange">
-                        @(Model.Transactions.Where(t => t.Type == "TuitionPayment" && t.Status == "Success").Sum(t => t.Amount).ToString("N0")) ₫
+                        @Model.TotalPaymentsAmount.ToString("N0") ₫
                     </span>
                 </div>
             </div>
@@ -232,14 +232,14 @@
                         <div class="flex gap-1">
                             @if (Model.CurrentPage > 1)
                             {
-                                <a href="?page=@(Model.CurrentPage - 1)"
+                                <a href="/Student/Wallet?Page=@(Model.CurrentPage - 1)"
                                    class="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-fpt-navy hover:text-white text-slate-700 text-xs font-medium transition-colors">
                                     ← Trước
                                 </a>
                             }
                             @for (int p = Math.Max(1, Model.CurrentPage - 2); p <= Math.Min(totalPages, Model.CurrentPage + 2); p++)
                             {
-                                <a href="?page=@p"
+                                <a href="/Student/Wallet?Page=@p"
                                    class="px-3 py-1.5 rounded-lg text-xs font-bold transition-colors
                                    @(p == Model.CurrentPage ? "bg-fpt-navy text-white" : "bg-slate-100 hover:bg-fpt-navy/10 text-slate-700")">
                                     @p
@@ -247,7 +247,7 @@
                             }
                             @if (Model.CurrentPage < totalPages)
                             {
-                                <a href="?page=@(Model.CurrentPage + 1)"
+                                <a href="/Student/Wallet?Page=@(Model.CurrentPage + 1)"
                                    class="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-fpt-navy hover:text-white text-slate-700 text-xs font-medium transition-colors">
                                     Sau →
                                 </a>

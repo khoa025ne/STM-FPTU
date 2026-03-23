@@ -22,13 +22,17 @@ public class WalletService : IWalletService
         var user = await _userRepo.GetWithRoleAsync(userId);
         if (user == null) return new WalletDto { UserId = userId };
 
+        // Get recent transactions for display
         var transactions = await _transactionRepo.GetByUserAsync(userId, 1, 10);
+
+        // Get actual calculated balance from database
+        var calculatedBalance = await _transactionRepo.GetUserBalanceAsync(userId);
 
         return new WalletDto
         {
             UserId = userId,
             FullName = user.FullName,
-            Balance = user.WalletBalance,
+            Balance = calculatedBalance,
             RecentTransactions = transactions.Select(MapToDto).ToList()
         };
     }
@@ -56,10 +60,6 @@ public class WalletService : IWalletService
         if (user == null)
             return ServiceResult.Failure("Không tìm thấy người dùng.");
 
-        // Update wallet balance
-        user.WalletBalance += amount;
-        await _userRepo.UpdateAsync(user);
-
         // Create transaction record
         var transaction = new Transaction
         {
@@ -75,7 +75,12 @@ public class WalletService : IWalletService
         };
         await _transactionRepo.AddAsync(transaction);
 
-        return ServiceResult.Success($"Nạp {amount:N0} VND thành công! Số dư mới: {user.WalletBalance:N0} VND");
+        // Recalculate wallet balance from all transactions
+        var calculatedBalance = await _transactionRepo.GetUserBalanceAsync(userId);
+        user.WalletBalance = calculatedBalance;
+        await _userRepo.UpdateAsync(user);
+
+        return ServiceResult.Success($"Nạp {amount:N0} VND thành công! Số dư mới: {calculatedBalance:N0} VND");
     }
 
     public async Task<List<TransactionDto>> GetTransactionsAsync(int userId, int page = 1, int pageSize = 10)

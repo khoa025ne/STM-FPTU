@@ -110,6 +110,13 @@ public class AppDbContext : DbContext
             .HasForeignKey(e => e.SemesterId)
             .OnDelete(DeleteBehavior.Restrict);
 
+        // Transaction: User
+        modelBuilder.Entity<Transaction>()
+            .HasOne(t => t.User)
+            .WithMany(u => u.Transactions)
+            .HasForeignKey(t => t.UserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
         // Decimal precision
         modelBuilder.Entity<User>().Property(u => u.WalletBalance).HasPrecision(18, 2);
         modelBuilder.Entity<Grade>().Property(g => g.MidtermScore).HasPrecision(4, 1);
