@@ -1,0 +1,219 @@
+@page
+@model FPT_SM.Web.Pages.Admin.Reports.IndexModel
+@using Microsoft.AspNetCore.Mvc.Rendering
+@using System.Text.Json
+@using System.Globalization
+@{
+    Layout = "_AdminLayout";
+    var chartLabels = Model.RevenueReport.Monthly.Select(m => m.Month).ToList();
+    var revenueValues = Model.RevenueReport.Monthly.Select(m => m.Revenue).ToList();
+    var passLabels = Model.GradeReports.Select(g => g.SubjectCode).ToList();
+    var passValues = Model.GradeReports.Select(g => Math.Round(g.PassRate, 1)).ToList();
+    var failValues = Model.GradeReports.Select(g => g.FailCount).ToList();
+    var semesterLabels = Model.SemesterTrends.Select(s => s.SemesterName).ToList();
+    var semesterValues = Model.SemesterTrends.Select(s => s.EnrollmentCount).ToList();
+    var selectedSemester = Model.Semesters.FirstOrDefault(s => s.Id == Model.SemesterId);
+}
+
+<div class="space-y-6">
+    <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex flex-col md:flex-row gap-6 items-center">
+        <div class="flex-1">
+            <p class="text-slate-400 text-sm">Tổng quan hệ thống</p>
+            <h1 class="text-2xl font-bold text-slate-800">Báo cáo FPTSM</h1>
+            <p class="text-xs text-slate-500 mt-1">Kỳ chọn: <strong>@selectedSemester?.Name ?? "Tất cả"</strong></p>
+        </div>
+        <div class="flex flex-wrap gap-3">
+            <button class="px-4 py-2 rounded-lg bg-slate-100 text-sm text-slate-600 font-semibold" type="button">
+                SV: @Model.Overview.TotalStudents
+            </button>
+            <button class="px-4 py-2 rounded-lg bg-slate-100 text-sm text-slate-600 font-semibold" type="button">
+                GV: @Model.Overview.TotalTeachers
+            </button>
+            <button class="px-4 py-2 rounded-lg bg-fpt-orange text-white text-sm font-semibold" type="button">
+                Doanh thu: @Model.Overview.TotalRevenue.ToString("N0") VNĐ
+            </button>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-6">
+        <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 space-y-6">
+            <div class="flex flex-wrap gap-4 items-center justify-between">
+                <div>
+                    <h2 class="text-lg font-bold text-slate-800">Lọc dữ liệu</h2>
+                    <p class="text-xs text-slate-400">Chọn kỳ/ tháng để cập nhật số liệu.</p>
+                </div>
+            </div>
+            <form method="get" class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <label class="text-xs font-semibold text-slate-500">
+                    Học kỳ
+                    <select asp-for="SemesterId" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm">
+                        @foreach (var semester in Model.Semesters)
+                        {
+                            <option value="@semester.Id">@semester.Name</option>
+                        }
+                    </select>
+                </label>
+                <label class="text-xs font-semibold text-slate-500">
+                    Tháng
+                    <select asp-for="Month" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm">
+                        @for (int m = 1; m <= 12; m++)
+                        {
+                            <option value="@m">@CultureInfo.CurrentCulture.DateTimeFormat.GetAbbreviatedMonthName(m)</option>
+                        }
+                    </select>
+                </label>
+                <label class="text-xs font-semibold text-slate-500">
+                    Năm
+                    <select asp-for="Year" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm">
+                        @for (int y = DateTime.Now.Year - 1; y <= DateTime.Now.Year; y++)
+                        {
+                            <option value="@y">@y</option>
+                        }
+                    </select>
+                </label>
+                <div class="sm:col-span-3 flex gap-3">
+                    <button class="flex-1 py-2 rounded-xl bg-fpt-navy text-white text-sm font-bold hover:bg-blue-900 transition" type="submit">
+                        Áp dụng
+                    </button>
+                </div>
+            </form>
+        </div>
+        <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 space-y-4">
+            <h3 class="text-sm font-semibold text-slate-500">Xuất báo cáo</h3>
+            <form method="post" asp-page-handler="ExportExcel" class="space-y-3">
+                <input type="hidden" asp-for="SemesterId" />
+                <input type="hidden" asp-for="Month" />
+                <input type="hidden" asp-for="Year" />
+                <button type="submit" class="w-full py-2 rounded-xl bg-fpt-orange text-white text-sm font-bold hover:bg-orange-600">Tải Excel</button>
+            </form>
+            <form method="post" asp-page-handler="ExportPdf" class="space-y-3">
+                <input type="hidden" asp-for="SemesterId" />
+                <input type="hidden" asp-for="Month" />
+                <input type="hidden" asp-for="Year" />
+                <button type="submit" class="w-full py-2 rounded-xl bg-slate-800 text-white text-sm font-bold hover:bg-slate-900">Tải PDF</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div class="bg-white border border-slate-100 rounded-2xl shadow-sm p-4">
+            <p class="text-xs text-slate-400">Doanh thu theo tháng</p>
+            <canvas id="revenueChart" height="180"></canvas>
+        </div>
+        <div class="bg-white border border-slate-100 rounded-2xl shadow-sm p-4">
+            <p class="text-xs text-slate-400">Tỉ lệ đậu/rớt theo môn</p>
+            <canvas id="gradeChart" height="180"></canvas>
+        </div>
+        <div class="bg-white border border-slate-100 rounded-2xl shadow-sm p-4">
+            <p class="text-xs text-slate-400">Đăng ký theo học kỳ</p>
+            <canvas id="semesterChart" height="180"></canvas>
+        </div>
+    </div>
+
+    <div class="bg-white border border-slate-100 rounded-2xl shadow-sm p-6 space-y-4">
+        <div class="flex items-center justify-between">
+            <h3 class="text-lg font-bold text-slate-800">Top môn học được đăng ký</h3>
+            <span class="text-xs text-slate-500">Hiển thị 5 môn nhiều SV nhất</span>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm text-left text-slate-600">
+                <thead>
+                    <tr class="text-xs uppercase tracking-wide text-slate-400">
+                        <th class="py-3 pr-4">Môn học</th>
+                        <th class="py-3 pr-4">Lớp</th>
+                        <th class="py-3 pr-4">Đăng ký</th>
+                        <th class="py-3 pr-4">Sức chứa</th>
+                        <th class="py-3 pr-4">Tỉ lệ lấp đầy</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    @foreach (var item in Model.TopSubjects)
+                    {
+                        <tr>
+                            <td class="py-3 pr-4">@item.SubjectName (@item.SubjectCode)</td>
+                            <td class="py-3 pr-4">@item.ClassName</td>
+                            <td class="py-3 pr-4">@item.TotalEnrolled</td>
+                            <td class="py-3 pr-4">@item.Capacity</td>
+                            <td class="py-3 pr-4">
+                                <div class="h-2.5 bg-slate-200 rounded-full">
+                                    <div class="h-2.5 bg-fpt-orange rounded-full" style="width:@(item.Capacity > 0 ? (item.TotalEnrolled * 100 / item.Capacity) : 0)%"></div>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    const revenueCtx = document.getElementById('revenueChart');
+    new Chart(revenueCtx, {
+        type: 'line',
+        data: {
+            labels: @Html.Raw(JsonSerializer.Serialize(chartLabels)),
+            datasets: [{
+                label: 'Doanh thu',
+                borderColor: '#0EA5E9',
+                backgroundColor: 'rgba(14,165,233,0.2)',
+                data: @Html.Raw(JsonSerializer.Serialize(revenueValues)),
+                tension: 0.35,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: { beginAtZero: true, ticks: { callback: value => value.toLocaleString('vi-VN') } }
+            }
+        }
+    });
+
+    const gradeCtx = document.getElementById('gradeChart');
+    new Chart(gradeCtx, {
+        type: 'bar',
+        data: {
+            labels: @Html.Raw(JsonSerializer.Serialize(passLabels)),
+            datasets: [
+                {
+                    label: 'Đậu',
+                    backgroundColor: '#14B8A6',
+                    data: @Html.Raw(JsonSerializer.Serialize(passValues))
+                },
+                {
+                    label: 'Rớt',
+                    backgroundColor: '#EF4444',
+                    data: @Html.Raw(JsonSerializer.Serialize(failValues))
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: { beginAtZero: true }
+            }
+        }
+    });
+
+    const semesterCtx = document.getElementById('semesterChart');
+    new Chart(semesterCtx, {
+        type: 'bar',
+        data: {
+            labels: @Html.Raw(JsonSerializer.Serialize(semesterLabels)),
+            datasets: [{
+                label: 'Sinh viên',
+                backgroundColor: '#4F46E5',
+                data: @Html.Raw(JsonSerializer.Serialize(semesterValues))
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: { beginAtZero: true }
+            }
+        }
+    });
+</script>
+}

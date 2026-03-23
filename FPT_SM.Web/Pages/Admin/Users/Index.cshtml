@@ -1,0 +1,406 @@
+@page
+@model FPT_SM.Web.Pages.Admin.Users.IndexModel
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Quản lý tài khoản";
+}
+
+<!-- Page Header -->
+<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6" data-aos="fade-down">
+    <div>
+        <h2 class="text-2xl font-black text-fpt-navy">Quản lý tài khoản</h2>
+        <p class="text-slate-500 text-sm mt-1">Quản lý tất cả người dùng trong hệ thống</p>
+    </div>
+    <a href="/Admin/Users/Create"
+       class="inline-flex items-center gap-2 bg-fpt-orange hover:bg-orange-500 text-white font-semibold px-5 py-2.5 rounded-xl text-sm transition-all hover:shadow-lg">
+        <i data-lucide="user-plus" class="w-4 h-4"></i>
+        Thêm người dùng
+    </a>
+</div>
+
+<!-- Toast from TempData -->
+@if (TempData["Success"] != null)
+{
+    <div id="tempSuccessMsg" class="hidden">@TempData["Success"]</div>
+}
+@if (TempData["Error"] != null)
+{
+    <div id="tempErrorMsg" class="hidden">@TempData["Error"]</div>
+}
+
+<!-- Filters -->
+<div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 mb-5" data-aos="fade-up" data-aos-delay="50">
+    <div class="flex flex-col sm:flex-row gap-3">
+        <div class="flex-1 relative">
+            <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400"></i>
+            <input type="text" id="searchInput" placeholder="Tìm kiếm theo tên, email..."
+                   value="@Model.SearchTerm"
+                   class="w-full pl-9 pr-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-fpt-navy/20 text-sm" />
+        </div>
+        <select id="roleFilter" class="px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-fpt-navy/20 text-sm bg-white min-w-[180px]">
+            <option value="">Tất cả vai trò</option>
+            @if (Model.RoleFilter == 1)
+            {
+                <option value="1" selected>Admin</option>
+            }
+            else
+            {
+                <option value="1">Admin</option>
+            }
+            @if (Model.RoleFilter == 2)
+            {
+                <option value="2" selected>Manager</option>
+            }
+            else
+            {
+                <option value="2">Manager</option>
+            }
+            @if (Model.RoleFilter == 3)
+            {
+                <option value="3" selected>Giảng viên</option>
+            }
+            else
+            {
+                <option value="3">Giảng viên</option>
+            }
+            @if (Model.RoleFilter == 4)
+            {
+                <option value="4" selected>Sinh viên</option>
+            }
+            else
+            {
+                <option value="4">Sinh viên</option>
+            }
+        </select>
+        <button id="applyFilter" class="px-5 py-2.5 bg-fpt-navy text-white rounded-xl text-sm font-semibold hover:bg-blue-900 transition-colors">
+            Lọc
+        </button>
+        <a href="/Admin/Users" class="px-5 py-2.5 bg-slate-100 text-slate-600 rounded-xl text-sm font-semibold hover:bg-slate-200 transition-colors text-center">
+            Xóa lọc
+        </a>
+    </div>
+</div>
+
+<!-- Stats row -->
+<div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5" data-aos="fade-up" data-aos-delay="80">
+    <div class="bg-white rounded-xl border border-slate-100 p-3 flex items-center gap-3">
+        <div class="w-9 h-9 rounded-lg bg-fpt-navy/10 flex items-center justify-center">
+            <i data-lucide="users" class="w-4 h-4 text-fpt-navy"></i>
+        </div>
+        <div>
+            <p class="text-xs text-slate-400">Tổng cộng</p>
+            <p class="text-lg font-black text-fpt-navy" id="statTotal">@Model.TotalCount</p>
+        </div>
+    </div>
+    <div class="bg-white rounded-xl border border-slate-100 p-3 flex items-center gap-3">
+        <div class="w-9 h-9 rounded-lg bg-teal-100 flex items-center justify-center">
+            <i data-lucide="check-circle" class="w-4 h-4 text-teal-600"></i>
+        </div>
+        <div>
+            <p class="text-xs text-slate-400">Hoạt động</p>
+            <p class="text-lg font-black text-teal-600">@Model.Users.Count(u => u.IsActive)</p>
+        </div>
+    </div>
+    <div class="bg-white rounded-xl border border-slate-100 p-3 flex items-center gap-3">
+        <div class="w-9 h-9 rounded-lg bg-red-100 flex items-center justify-center">
+            <i data-lucide="x-circle" class="w-4 h-4 text-red-500"></i>
+        </div>
+        <div>
+            <p class="text-xs text-slate-400">Bị khóa</p>
+            <p class="text-lg font-black text-red-500">@Model.Users.Count(u => !u.IsActive)</p>
+        </div>
+    </div>
+    <div class="bg-white rounded-xl border border-slate-100 p-3 flex items-center gap-3">
+        <div class="w-9 h-9 rounded-lg bg-fpt-orange/10 flex items-center justify-center">
+            <i data-lucide="graduation-cap" class="w-4 h-4 text-fpt-orange"></i>
+        </div>
+        <div>
+            <p class="text-xs text-slate-400">Sinh viên</p>
+            <p class="text-lg font-black text-fpt-orange">@Model.Users.Count(u => u.RoleId == 4)</p>
+        </div>
+    </div>
+</div>
+
+<!-- Table -->
+<div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden" data-aos="fade-up" data-aos-delay="100">
+    <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+        <h3 class="font-bold text-slate-800">Danh sách người dùng</h3>
+        <span class="text-sm text-slate-400">@Model.TotalCount người dùng</span>
+    </div>
+
+    <!-- Skeleton Loading (hidden after load) -->
+    <div id="skeletonRows" class="hidden">
+        @for (int s = 0; s < 5; s++)
+        {
+            <div class="flex items-center gap-4 px-6 py-4 border-b border-slate-50 animate-pulse">
+                <div class="h-4 bg-slate-200 rounded w-8 flex-shrink-0"></div>
+                <div class="h-8 w-8 bg-slate-200 rounded-full flex-shrink-0"></div>
+                <div class="flex-1 space-y-2">
+                    <div class="h-4 bg-slate-200 rounded w-40"></div>
+                    <div class="h-3 bg-slate-200 rounded w-56"></div>
+                </div>
+                <div class="h-6 bg-slate-200 rounded-full w-20"></div>
+                <div class="h-6 bg-slate-200 rounded-full w-16"></div>
+                <div class="flex gap-2">
+                    <div class="h-8 bg-slate-200 rounded-lg w-16"></div>
+                    <div class="h-8 bg-slate-200 rounded-lg w-16"></div>
+                    <div class="h-8 bg-slate-200 rounded-lg w-16"></div>
+                </div>
+            </div>
+        }
+    </div>
+
+    <div class="overflow-x-auto" id="tableContent">
+        @if (!Model.Users.Any())
+        {
+            <div class="text-center py-16 text-slate-400">
+                <i data-lucide="users" class="w-12 h-12 mx-auto mb-3 opacity-30"></i>
+                <p class="font-medium">Không tìm thấy người dùng nào</p>
+                <p class="text-sm mt-1">Thử thay đổi bộ lọc tìm kiếm</p>
+            </div>
+        }
+        else
+        {
+            <table class="w-full text-sm" id="usersTable">
+                <thead class="bg-slate-50 text-slate-500 text-xs font-semibold uppercase tracking-wider">
+                    <tr>
+                        <th class="px-5 py-3.5 text-left w-12">STT</th>
+                        <th class="px-5 py-3.5 text-left">Họ tên</th>
+                        <th class="px-5 py-3.5 text-left">Email</th>
+                        <th class="px-5 py-3.5 text-left">Mã SV</th>
+                        <th class="px-5 py-3.5 text-left">Vai trò</th>
+                        <th class="px-5 py-3.5 text-left">Trạng thái</th>
+                        <th class="px-5 py-3.5 text-left">Ngày tạo</th>
+                        <th class="px-5 py-3.5 text-right">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-50" id="userRows">
+                    @{int stt = (Model.Page - 1) * 15 + 1;}
+                    @foreach (var user in Model.Users)
+                    {
+                        var roleBadge = user.RoleId switch {
+                            1 => "bg-fpt-navy text-white",
+                            2 => "bg-purple-100 text-purple-700",
+                            3 => "bg-sky-100 text-sky-700",
+                            4 => "bg-teal-100 text-teal-700",
+                            _ => "bg-slate-100 text-slate-600"
+                        };
+                        var roleLabel = user.RoleId switch {
+                            1 => "Admin",
+                            2 => "Manager",
+                            3 => "Giảng viên",
+                            4 => "Sinh viên",
+                            _ => user.RoleName
+                        };
+                        <tr class="hover:bg-slate-50 transition-colors user-row"
+                            data-name="@user.FullName.ToLower()"
+                            data-email="@user.Email.ToLower()"
+                            data-role="@user.RoleId">
+                            <td class="px-5 py-3.5 text-slate-400 font-medium">@(stt++)</td>
+                            <td class="px-5 py-3.5">
+                                <div class="flex items-center gap-3">
+                                    @if (!string.IsNullOrEmpty(user.AvatarUrl))
+                                    {
+                                        <img src="@user.AvatarUrl" class="w-8 h-8 rounded-full object-cover flex-shrink-0" alt="" />
+                                    }
+                                    else
+                                    {
+                                        <div class="w-8 h-8 rounded-full bg-fpt-orange flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                                            @user.FullName.FirstOrDefault()
+                                        </div>
+                                    }
+                                    <span class="font-semibold text-slate-800">@user.FullName</span>
+                                </div>
+                            </td>
+                            <td class="px-5 py-3.5 text-slate-500">@user.Email</td>
+                            <td class="px-5 py-3.5">
+                                @if (!string.IsNullOrEmpty(user.RollNumber))
+                                {
+                                    <span class="text-xs font-mono bg-slate-100 text-slate-600 px-2 py-1 rounded">@user.RollNumber</span>
+                                }
+                                else
+                                {
+                                    <span class="text-slate-300">—</span>
+                                }
+                            </td>
+                            <td class="px-5 py-3.5">
+                                <span class="text-xs font-semibold px-2.5 py-1 rounded-full @roleBadge">@roleLabel</span>
+                            </td>
+                            <td class="px-5 py-3.5">
+                                @if (user.IsActive)
+                                {
+                                    <span class="inline-flex items-center gap-1 text-xs font-semibold text-teal-700 bg-teal-100 px-2.5 py-1 rounded-full">
+                                        <span class="w-1.5 h-1.5 rounded-full bg-teal-500"></span> Hoạt động
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="inline-flex items-center gap-1 text-xs font-semibold text-red-600 bg-red-100 px-2.5 py-1 rounded-full">
+                                        <span class="w-1.5 h-1.5 rounded-full bg-red-500"></span> Bị khóa
+                                    </span>
+                                }
+                            </td>
+                            <td class="px-5 py-3.5 text-slate-400 text-xs">@user.CreatedAt.ToString("dd/MM/yyyy")</td>
+                            <td class="px-5 py-3.5">
+                                <div class="flex items-center justify-end gap-1.5">
+                                    <!-- Sửa -->
+                                    <a href="/Admin/Users/Edit?id=@user.Id"
+                                       class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold bg-sky-100 text-sky-700 hover:bg-sky-200 transition-colors">
+                                        <i data-lucide="edit-2" class="w-3 h-3"></i> Sửa
+                                    </a>
+                                    <!-- Khóa/Mở -->
+                                    <button type="button"
+                                            onclick="confirmToggle(@user.Id, '@user.FullName', @(user.IsActive ? "true" : "false"))"
+                                            class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors
+                                                @(user.IsActive ? "bg-amber-100 text-amber-700 hover:bg-amber-200" : "bg-teal-100 text-teal-700 hover:bg-teal-200")">
+                                        <i data-lucide="@(user.IsActive ? "lock" : "unlock")" class="w-3 h-3"></i>
+                                        @(user.IsActive ? "Khóa" : "Mở")
+                                    </button>
+                                    <!-- Xóa -->
+                                    <button type="button"
+                                            onclick="confirmDelete(@user.Id, '@user.FullName')"
+                                            class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold bg-red-100 text-red-600 hover:bg-red-200 transition-colors">
+                                        <i data-lucide="trash-2" class="w-3 h-3"></i> Xóa
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+
+    <!-- Pagination -->
+    @if (Model.TotalPages > 1)
+    {
+        <div class="px-6 py-4 border-t border-slate-100 flex items-center justify-between">
+            <p class="text-sm text-slate-400">
+                Trang <span class="font-semibold text-slate-600">@Model.Page</span> / @Model.TotalPages
+                &nbsp;·&nbsp; @Model.TotalCount người dùng
+            </p>
+            <div class="flex gap-2">
+                @if (Model.Page > 1)
+                {
+                    <a href="?page=@(Model.Page - 1)&searchTerm=@Model.SearchTerm&roleFilter=@Model.RoleFilter"
+                       class="px-3 py-1.5 rounded-lg border border-slate-200 text-sm text-slate-600 hover:bg-slate-50 transition-colors">
+                        <i data-lucide="chevron-left" class="w-4 h-4"></i>
+                    </a>
+                }
+                @for (int p = Math.Max(1, Model.Page - 2); p <= Math.Min(Model.TotalPages, Model.Page + 2); p++)
+                {
+                    <a href="?page=@p&searchTerm=@Model.SearchTerm&roleFilter=@Model.RoleFilter"
+                       class="px-3 py-1.5 rounded-lg border text-sm font-medium transition-colors
+                              @(p == Model.Page ? "bg-fpt-navy text-white border-fpt-navy" : "border-slate-200 text-slate-600 hover:bg-slate-50")">
+                        @p
+                    </a>
+                }
+                @if (Model.Page < Model.TotalPages)
+                {
+                    <a href="?page=@(Model.Page + 1)&searchTerm=@Model.SearchTerm&roleFilter=@Model.RoleFilter"
+                       class="px-3 py-1.5 rounded-lg border border-slate-200 text-sm text-slate-600 hover:bg-slate-50 transition-colors">
+                        <i data-lucide="chevron-right" class="w-4 h-4"></i>
+                    </a>
+                }
+            </div>
+        </div>
+    }
+</div>
+
+<!-- Hidden forms for POST actions -->
+<form id="toggleForm" method="post" asp-page-handler="ToggleActive" class="hidden">
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="id" id="toggleId" />
+</form>
+<form id="deleteForm" method="post" asp-page-handler="Delete" class="hidden">
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="id" id="deleteId" />
+</form>
+
+@section Scripts {
+<script>
+    // Show toasts from TempData
+    document.addEventListener('DOMContentLoaded', function () {
+        const successEl = document.getElementById('tempSuccessMsg');
+        const errorEl   = document.getElementById('tempErrorMsg');
+        if (successEl) showToast(successEl.textContent.trim(), 'success');
+        if (errorEl)   showToast(errorEl.textContent.trim(),   'error');
+    });
+
+    // Client-side filtering
+    const searchInput = document.getElementById('searchInput');
+    const roleFilter  = document.getElementById('roleFilter');
+    const applyBtn    = document.getElementById('applyFilter');
+
+    function applyFilters() {
+        const q    = searchInput.value.trim().toLowerCase();
+        const role = roleFilter.value;
+        const url  = new URL(window.location.href);
+        if (q)    url.searchParams.set('searchTerm',  q);    else url.searchParams.delete('searchTerm');
+        if (role) url.searchParams.set('roleFilter', role); else url.searchParams.delete('roleFilter');
+        url.searchParams.set('page', '1');
+        window.location.href = url.toString();
+    }
+
+    applyBtn?.addEventListener('click', applyFilters);
+    searchInput?.addEventListener('keydown', e => { if (e.key === 'Enter') applyFilters(); });
+
+    // Confirm toggle
+    function confirmToggle(id, name, isActive) {
+        const action = isActive ? 'khóa' : 'mở khóa';
+        const icon   = isActive ? 'warning' : 'success';
+        Swal.fire({
+            title: isActive ? 'Khóa tài khoản?' : 'Mở khóa tài khoản?',
+            html: `Bạn muốn <b>${action}</b> tài khoản <b>${name}</b>?`,
+            icon: icon,
+            showCancelButton: true,
+            confirmButtonColor: isActive ? '#F59E0B' : '#14B8A6',
+            cancelButtonColor: '#94A3B8',
+            confirmButtonText: `Xác nhận ${action}`,
+            cancelButtonText: 'Hủy',
+            borderRadius: '16px'
+        }).then(result => {
+            if (result.isConfirmed) {
+                document.getElementById('toggleId').value = id;
+                document.getElementById('toggleForm').submit();
+            }
+        });
+    }
+
+    // Confirm delete
+    function confirmDelete(id, name) {
+        Swal.fire({
+            title: 'Xóa tài khoản?',
+            html: `Tài khoản <b>${name}</b> sẽ bị xóa vĩnh viễn.<br><small class="text-slate-400">Hành động này không thể hoàn tác!</small>`,
+            icon: 'error',
+            showCancelButton: true,
+            confirmButtonColor: '#EF4444',
+            cancelButtonColor: '#94A3B8',
+            confirmButtonText: 'Xóa vĩnh viễn',
+            cancelButtonText: 'Hủy'
+        }).then(result => {
+            if (result.isConfirmed) {
+                document.getElementById('deleteId').value = id;
+                document.getElementById('deleteForm').submit();
+            }
+        });
+    }
+
+    // SignalR: listen for user updates
+    (async function () {
+        try {
+            const conn = await signalRManager.connect('notification', '/hubs/notification');
+            await conn.invoke('JoinGroup', 'admin_all');
+            conn.on('UserUpdated', function (data) {
+                if (data.action === 'delete') {
+                    showToast('Một tài khoản vừa bị xóa bởi quản trị viên khác.', 'info');
+                } else if (data.action === 'toggle') {
+                    showToast('Trạng thái tài khoản vừa được cập nhật.', 'info');
+                } else {
+                    showToast('Danh sách người dùng vừa được cập nhật.', 'info');
+                }
+            });
+        } catch (e) { console.warn('SignalR not connected', e); }
+    })();
+</script>
+}

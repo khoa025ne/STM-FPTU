@@ -1,0 +1,324 @@
+@page
+@model FPT_SM.Web.Pages.Manager.Classes.IndexModel
+@{
+    Layout = "_ManagerLayout";
+    ViewData["Title"] = "Quản lý Lớp học";
+}
+
+@if (TempData["Success"] != null)
+{
+    <div id="tempSuccessMsg" class="hidden">@TempData["Success"]</div>
+}
+@if (TempData["Error"] != null)
+{
+    <div id="tempErrorMsg" class="hidden">@TempData["Error"]</div>
+}
+
+<!-- Page Header -->
+<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6" data-aos="fade-down">
+    <div>
+        <h2 class="text-2xl font-black text-fpt-navy">Quản lý Lớp học</h2>
+        <p class="text-slate-500 text-sm mt-1">Phê duyệt và quản lý các lớp học trong hệ thống</p>
+    </div>
+    <div class="flex items-center gap-2">
+        <span class="text-sm text-slate-400">Tổng: <span class="font-bold text-fpt-navy">@Model.Classes.Count</span> lớp</span>
+    </div>
+</div>
+
+<!-- Stats -->
+<div class="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-5" data-aos="fade-up" data-aos-delay="50">
+    <div class="bg-gradient-to-br from-fpt-navy to-blue-800 rounded-xl p-4 text-white">
+        <p class="text-xs text-blue-200 mb-1">Tổng lớp học</p>
+        <p class="text-3xl font-black">@Model.Classes.Count</p>
+    </div>
+    <div class="bg-gradient-to-br from-sky-400 to-sky-600 rounded-xl p-4 text-white">
+        <p class="text-xs text-sky-100 mb-1">Chờ phê duyệt</p>
+        <p class="text-3xl font-black">@Model.Classes.Count(c => c.Status == 1)</p>
+    </div>
+    <div class="bg-gradient-to-br from-teal-400 to-teal-600 rounded-xl p-4 text-white">
+        <p class="text-xs text-teal-100 mb-1">Đang học</p>
+        <p class="text-3xl font-black">@Model.Classes.Count(c => c.Status == 2)</p>
+    </div>
+    <div class="bg-gradient-to-br from-amber-400 to-amber-600 rounded-xl p-4 text-white">
+        <p class="text-xs text-amber-100 mb-1">Đã kết thúc</p>
+        <p class="text-3xl font-black">@Model.Classes.Count(c => c.Status == 3)</p>
+    </div>
+    <div class="bg-gradient-to-br from-red-400 to-red-600 rounded-xl p-4 text-white">
+        <p class="text-xs text-red-100 mb-1">Đã hủy</p>
+        <p class="text-3xl font-black">@Model.Classes.Count(c => c.Status == 0)</p>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 mb-4" data-aos="fade-up" data-aos-delay="80">
+    <form method="get" class="flex flex-col sm:flex-row gap-3">
+        <select name="SemesterId" class="px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-fpt-navy/20 text-sm bg-white min-w-[200px]">
+            <option value="">Tất cả học kỳ</option>
+            @foreach (var sem in Model.Semesters)
+            {
+                @if (Model.SemesterId == sem.Id)
+                {
+                    <option value="@sem.Id" selected>@sem.Name</option>
+                }
+                else
+                {
+                    <option value="@sem.Id">@sem.Name</option>
+                }
+            }
+        </select>
+        <select name="Status" class="px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-fpt-navy/20 text-sm bg-white min-w-[180px]">
+            <option value="">Tất cả trạng thái</option>
+            @if (Model.Status == 1)
+            {
+                <option value="1" selected>Đang mở (chờ duyệt)</option>
+            }
+            else
+            {
+                <option value="1">Đang mở (chờ duyệt)</option>
+            }
+            @if (Model.Status == 2)
+            {
+                <option value="2" selected>Đang học</option>
+            }
+            else
+            {
+                <option value="2">Đang học</option>
+            }
+            @if (Model.Status == 3)
+            {
+                <option value="3" selected>Đã kết thúc</option>
+            }
+            else
+            {
+                <option value="3">Đã kết thúc</option>
+            }
+            @if (Model.Status == 0)
+            {
+                <option value="0" selected>Đã hủy</option>
+            }
+            else
+            {
+                <option value="0">Đã hủy</option>
+            }
+        </select>
+        <button type="submit" class="px-5 py-2.5 bg-fpt-navy text-white rounded-xl text-sm font-semibold hover:bg-blue-900 transition-colors">
+            Lọc
+        </button>
+        <a href="/Manager/Classes" class="px-5 py-2.5 bg-slate-100 text-slate-600 rounded-xl text-sm font-semibold hover:bg-slate-200 transition-colors text-center">
+            Xóa lọc
+        </a>
+    </form>
+</div>
+
+<!-- Table -->
+<div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden" data-aos="fade-up" data-aos-delay="100">
+    <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+        <h3 class="font-bold text-slate-800">Danh sách lớp học</h3>
+        <span class="text-sm text-slate-400">@Model.Classes.Count lớp học</span>
+    </div>
+
+    <!-- Skeleton -->
+    <div id="skeletonRows" class="hidden">
+        @for (int i = 0; i < 5; i++)
+        {
+            <div class="flex items-center gap-4 px-6 py-4 border-b border-slate-50 animate-pulse">
+                <div class="h-4 bg-slate-200 rounded w-24"></div>
+                <div class="h-4 bg-slate-200 rounded flex-1"></div>
+                <div class="h-4 bg-slate-200 rounded w-24"></div>
+                <div class="h-8 bg-slate-200 rounded-full w-32"></div>
+                <div class="h-6 bg-slate-200 rounded-full w-20"></div>
+                <div class="flex gap-2 ml-auto">
+                    <div class="h-8 bg-slate-200 rounded-lg w-24"></div>
+                    <div class="h-8 bg-slate-200 rounded-lg w-16"></div>
+                </div>
+            </div>
+        }
+    </div>
+
+    <div class="overflow-x-auto">
+        @if (!Model.Classes.Any())
+        {
+            <div class="text-center py-16 text-slate-400">
+                <i data-lucide="layout-grid" class="w-12 h-12 mx-auto mb-3 opacity-30"></i>
+                <p class="font-medium">Không tìm thấy lớp học nào</p>
+                <p class="text-sm mt-1">Thử thay đổi bộ lọc</p>
+            </div>
+        }
+        else
+        {
+            <table class="w-full text-sm">
+                <thead class="bg-slate-50 text-slate-500 text-xs font-semibold uppercase tracking-wider">
+                    <tr>
+                        <th class="px-4 py-3.5 text-left">Mã lớp</th>
+                        <th class="px-4 py-3.5 text-left">Môn học</th>
+                        <th class="px-4 py-3.5 text-left">Giáo viên</th>
+                        <th class="px-4 py-3.5 text-left">Lịch học</th>
+                        <th class="px-4 py-3.5 text-left">Kỳ học</th>
+                        <th class="px-4 py-3.5 text-left">Sĩ số</th>
+                        <th class="px-4 py-3.5 text-left">Phòng</th>
+                        <th class="px-4 py-3.5 text-left">Trạng thái</th>
+                        <th class="px-4 py-3.5 text-right">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-50">
+                    @foreach (var cls in Model.Classes)
+                    {
+                        var pct = cls.Capacity > 0 ? (int)Math.Round((double)cls.Enrolled / cls.Capacity * 100) : 0;
+                        var barColor = pct >= 90 ? "bg-red-500" : pct >= 70 ? "bg-amber-500" : "bg-teal-500";
+                        var badgeClass = cls.Status switch {
+                            0 => "bg-red-100 text-red-700",
+                            1 => "bg-sky-100 text-sky-700",
+                            2 => "bg-teal-100 text-teal-700",
+                            3 => "bg-amber-100 text-amber-700",
+                            _ => "bg-gray-100 text-gray-600"
+                        };
+                        var dotColor = cls.Status switch {
+                            0 => "bg-red-500",
+                            1 => "bg-sky-500",
+                            2 => "bg-teal-500",
+                            3 => "bg-amber-500",
+                            _ => "bg-gray-400"
+                        };
+                        <tr class="hover:bg-slate-50 transition-colors">
+                            <td class="px-4 py-3.5">
+                                <span class="text-xs font-mono bg-fpt-navy/10 text-fpt-navy px-2.5 py-1 rounded font-semibold">@cls.Name</span>
+                            </td>
+                            <td class="px-4 py-3.5">
+                                <p class="font-semibold text-slate-800">@cls.SubjectCode</p>
+                                <p class="text-xs text-slate-400 mt-0.5 truncate max-w-[140px]">@cls.SubjectName</p>
+                            </td>
+                            <td class="px-4 py-3.5 text-slate-600">@cls.TeacherName</td>
+                            <td class="px-4 py-3.5">
+                                <p class="text-slate-700 font-medium">@cls.SlotName</p>
+                                <p class="text-xs text-slate-400">@cls.DayName · @cls.StartTime.ToString(@"hh\:mm") - @cls.EndTime.ToString(@"hh\:mm")</p>
+                            </td>
+                            <td class="px-4 py-3.5 text-slate-500 text-xs">@cls.SemesterName</td>
+                            <td class="px-4 py-3.5 min-w-[120px]">
+                                <div class="flex items-center gap-2">
+                                    <div class="flex-1 bg-slate-100 rounded-full h-1.5">
+                                        <div class="h-1.5 rounded-full @barColor transition-all" style="width: @pct%"></div>
+                                    </div>
+                                    <span class="text-xs text-slate-600 whitespace-nowrap">@cls.Enrolled/@cls.Capacity</span>
+                                </div>
+                            </td>
+                            <td class="px-4 py-3.5 text-slate-500 text-xs">@(cls.RoomNumber ?? "—")</td>
+                            <td class="px-4 py-3.5">
+                                <span class="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full @badgeClass">
+                                    <span class="w-1.5 h-1.5 rounded-full @dotColor"></span>
+                                    @cls.StatusName
+                                </span>
+                            </td>
+                            <td class="px-4 py-3.5">
+                                <div class="flex items-center justify-end gap-1.5">
+                                    @if (cls.Status == 1)
+                                    {
+                                        <button type="button"
+                                                onclick="confirmApprove(@cls.Id, '@cls.Name')"
+                                                class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold bg-teal-100 text-teal-700 hover:bg-teal-200 transition-colors">
+                                            <i data-lucide="check" class="w-3 h-3"></i> Phê duyệt
+                                        </button>
+                                        <button type="button"
+                                                onclick="confirmCancel(@cls.Id, '@cls.Name')"
+                                                class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold bg-red-100 text-red-600 hover:bg-red-200 transition-colors">
+                                            <i data-lucide="x" class="w-3 h-3"></i> Hủy
+                                        </button>
+                                    }
+                                    @if (cls.Status == 2)
+                                    {
+                                        <button type="button"
+                                                onclick="confirmCancel(@cls.Id, '@cls.Name')"
+                                                class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold bg-red-100 text-red-600 hover:bg-red-200 transition-colors">
+                                            <i data-lucide="x" class="w-3 h-3"></i> Hủy lớp
+                                        </button>
+                                    }
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+</div>
+
+<!-- Hidden Forms -->
+<form id="approveForm" method="post" asp-page-handler="Approve" class="hidden">
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="id" id="approveId" />
+</form>
+<form id="cancelForm" method="post" asp-page-handler="Cancel" class="hidden">
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="id" id="cancelId" />
+    <input type="hidden" name="reason" id="cancelReason" />
+</form>
+
+@section Scripts {
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const s = document.getElementById('tempSuccessMsg');
+        const e = document.getElementById('tempErrorMsg');
+        if (s) showToast(s.textContent.trim(), 'success');
+        if (e) showToast(e.textContent.trim(), 'error');
+    });
+
+    function confirmApprove(id, name) {
+        Swal.fire({
+            title: 'Phê duyệt lớp học?',
+            html: `Bạn muốn phê duyệt lớp <b>${name}</b>?<br><small class="text-slate-400">Lớp sẽ chuyển sang trạng thái <b>Đang học</b>.</small>`,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#14B8A6',
+            cancelButtonColor: '#94A3B8',
+            confirmButtonText: 'Phê duyệt',
+            cancelButtonText: 'Hủy'
+        }).then(r => {
+            if (r.isConfirmed) {
+                document.getElementById('approveId').value = id;
+                document.getElementById('approveForm').submit();
+            }
+        });
+    }
+
+    function confirmCancel(id, name) {
+        Swal.fire({
+            title: 'Hủy lớp học?',
+            html: `Bạn muốn hủy lớp <b>${name}</b>?<br><small class="text-slate-400">Học sinh đã đăng ký sẽ bị ảnh hưởng.</small>`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#EF4444',
+            cancelButtonColor: '#94A3B8',
+            confirmButtonText: 'Xác nhận hủy',
+            cancelButtonText: 'Không hủy'
+        }).then(r => {
+            if (r.isConfirmed) {
+                document.getElementById('cancelId').value = id;
+                document.getElementById('cancelReason').value = 'Manager hủy';
+                document.getElementById('cancelForm').submit();
+            }
+        });
+    }
+
+    // SignalR - Auto-reload data when classes are created/updated by Admin
+    (async function () {
+        try {
+            const conn = await signalRManager.connect('notification', '/hubs/notification');
+            await conn.invoke('JoinGroup', 'manager_all');
+
+            conn.on('ClassUpdated', async function (data) {
+                // Show notification
+                if (data.action === 'create') {
+                    showToast('Lớp học mới đã được tạo. Đang cập nhật...', 'info');
+                } else if (data.action === 'approve') {
+                    showToast('Lớp học đã được phê duyệt. Đang cập nhật...', 'info');
+                } else if (data.action === 'cancel') {
+                    showToast('Lớp học đã được hủy. Đang cập nhật...', 'info');
+                }
+
+                // Wait 1 second for UI feedback, then reload data
+                await new Promise(r => setTimeout(r, 1000));
+                window.location.reload();
+            });
+        } catch (e) { console.warn('SignalR not connected', e); }
+    })();
+</script>
+}

@@ -1,0 +1,80 @@
+@page
+@model FPT_SM.Web.Pages.Payment.CallbackModel
+@{
+    Layout = null;
+}
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@(Model.IsSuccess ? "Thanh toán thành công" : "Thanh toán thất bại") – FPT Education</title>
+    @if (Model.IsSuccess)
+    {
+        <meta http-equiv="refresh" content="3;url=/Student/Wallet" />
+    }
+    else
+    {
+        <meta http-equiv="refresh" content="4;url=/Student/Wallet" />
+    }
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @@keyframes spin { to { transform: rotate(360deg); } }
+        .spinner { animation: spin 1s linear infinite; }
+        @@keyframes pulse-scale { 0%,100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+        .pulse-anim { animation: pulse-scale 1.5s ease-in-out infinite; }
+    </style>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-slate-100 to-blue-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl shadow-2xl p-10 max-w-md w-full text-center">
+        @if (Model.IsSuccess)
+        {
+            <!-- Success -->
+            <div class="w-20 h-20 bg-teal-100 rounded-full flex items-center justify-center mx-auto mb-6 pulse-anim">
+                <svg class="w-10 h-10 text-teal-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
+                </svg>
+            </div>
+            <h1 class="text-2xl font-black text-slate-800 mb-2">Thanh toán thành công! 🎉</h1>
+            <p class="text-slate-500 mb-4 text-sm">@Model.Message</p>
+            <div class="bg-teal-50 border border-teal-200 rounded-2xl px-6 py-4 mb-6 inline-block w-full">
+                <p class="text-teal-600 text-xs font-semibold uppercase tracking-wide mb-1">Số tiền đã nạp</p>
+                <p class="text-teal-700 text-3xl font-black">@Model.Amount.ToString("N0") ₫</p>
+            </div>
+            <div class="flex items-center justify-center gap-2 text-slate-400 text-sm mb-2">
+                <svg class="w-4 h-4 spinner" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                </svg>
+                Đang chuyển hướng về ví tiền...
+            </div>
+            <p class="text-slate-300 text-xs">Tự động chuyển sau 3 giây</p>
+        }
+        else
+        {
+            <!-- Failed -->
+            <div class="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                <svg class="w-10 h-10 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </div>
+            <h1 class="text-2xl font-black text-slate-800 mb-2">Thanh toán thất bại</h1>
+            <p class="text-slate-500 mb-6 text-sm">@Model.Message</p>
+            <div class="bg-red-50 border border-red-200 rounded-2xl px-6 py-4 mb-6">
+                <p class="text-red-600 text-xs font-medium">Không có khoản tiền nào bị trừ từ tài khoản của bạn.</p>
+            </div>
+            <div class="flex items-center justify-center gap-2 text-slate-400 text-sm mb-2">
+                <svg class="w-4 h-4 spinner" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                </svg>
+                Đang chuyển hướng...
+            </div>
+            <p class="text-slate-300 text-xs">Tự động chuyển sau 4 giây</p>
+        }
+
+        <a href="/Student/Wallet"
+           class="mt-4 inline-flex items-center gap-2 text-blue-600 hover:text-blue-800 text-sm font-semibold underline">
+            Quay lại ví tiền ngay
+        </a>
+    </div>
+</body>
+</html>

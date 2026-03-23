@@ -1,0 +1,286 @@
+@page
+@model FPT_SM.Web.Pages.Student.Grades.IndexModel
+@{
+    Layout = "_StudentLayout";
+    ViewData["Title"] = "Điểm số";
+    var publishedGrades = Model.Grades.Where(g => g.Status == 2).ToList();
+    var draftGrades = Model.Grades.Where(g => g.Status != 2).ToList();
+    var avgGPA = publishedGrades.Any(g => g.GPA.HasValue)
+        ? publishedGrades.Where(g => g.GPA.HasValue).Average(g => (double)g.GPA!.Value)
+        : 0;
+    var passCount = publishedGrades.Count(g => g.IsPassed);
+    var failCount = publishedGrades.Count(g => !g.IsPassed && g.GPA.HasValue);
+}
+
+<!-- Page Banner -->
+<div class="bg-gradient-to-r from-fpt-navy to-blue-800 rounded-2xl p-6 mb-6 flex items-center justify-between" data-aos="fade-down">
+    <div>
+        <h2 class="text-white font-black text-2xl">Điểm số</h2>
+        <p class="text-white/60 text-sm mt-1">Kết quả học tập của bạn theo từng môn</p>
+    </div>
+    <div class="flex flex-col sm:flex-row items-end gap-3">
+        <a href="/Student/Grades/Statistics" class="inline-flex items-center gap-2 bg-fpt-orange hover:bg-orange-600 text-white font-semibold px-4 py-2 rounded-xl text-sm transition-all whitespace-nowrap">
+            <i data-lucide="bar-chart-2" class="w-4 h-4"></i>
+            Thống kê
+        </a>
+        <div class="hidden sm:flex items-center gap-2">
+            <div class="text-right">
+                <p class="text-white/60 text-xs">GPA trung bình</p>
+                <p class="text-white font-black text-3xl">@(publishedGrades.Any(g => g.GPA.HasValue) ? avgGPA.ToString("F2") : "—")</p>
+            </div>
+            <div class="w-14 h-14 bg-white/10 rounded-2xl flex items-center justify-center">
+                <i data-lucide="star" class="w-7 h-7 text-fpt-orange"></i>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Summary Cards -->
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+    <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100" data-aos="fade-up" data-aos-delay="0">
+        <div class="w-10 h-10 bg-fpt-navy/10 rounded-xl flex items-center justify-center mb-3">
+            <i data-lucide="book-open" class="w-5 h-5 text-fpt-navy"></i>
+        </div>
+        <p class="text-2xl font-black text-fpt-navy">@Model.Grades.Count</p>
+        <p class="text-xs text-slate-500 mt-0.5">Tổng số môn</p>
+    </div>
+    <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100" data-aos="fade-up" data-aos-delay="60">
+        <div class="w-10 h-10 bg-teal-100 rounded-xl flex items-center justify-center mb-3">
+            <i data-lucide="check-circle" class="w-5 h-5 text-teal-600"></i>
+        </div>
+        <p class="text-2xl font-black text-teal-600">@passCount</p>
+        <p class="text-xs text-slate-500 mt-0.5">Số môn đậu</p>
+    </div>
+    <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100" data-aos="fade-up" data-aos-delay="120">
+        <div class="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center mb-3">
+            <i data-lucide="x-circle" class="w-5 h-5 text-red-500"></i>
+        </div>
+        <p class="text-2xl font-black text-red-500">@failCount</p>
+        <p class="text-xs text-slate-500 mt-0.5">Số môn rớt</p>
+    </div>
+    <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100" data-aos="fade-up" data-aos-delay="180">
+        <div class="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center mb-3">
+            <i data-lucide="clock" class="w-5 h-5 text-amber-500"></i>
+        </div>
+        <p class="text-2xl font-black text-amber-500">@draftGrades.Count</p>
+        <p class="text-xs text-slate-500 mt-0.5">Chờ công bố</p>
+    </div>
+</div>
+
+<!-- Toggle Draft Grades -->
+@if (draftGrades.Any())
+{
+    <div class="flex items-center justify-end mb-4" data-aos="fade-up">
+        <label class="flex items-center gap-2 cursor-pointer select-none">
+            <span class="text-sm text-slate-500">Hiển thị điểm nháp</span>
+            <div class="relative">
+                <input type="checkbox" id="showDraft" class="sr-only peer" onchange="toggleDraft(this)" />
+                <div class="w-10 h-6 bg-slate-200 peer-checked:bg-fpt-navy rounded-full transition-colors"></div>
+                <div class="absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform peer-checked:translate-x-4"></div>
+            </div>
+        </label>
+    </div>
+}
+
+<!-- Published Grades -->
+@if (publishedGrades.Any())
+{
+    <div class="mb-4">
+        <h3 class="text-slate-600 font-semibold text-sm uppercase tracking-wider mb-3 flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-teal-500 inline-block"></span>
+            Điểm đã công bố
+        </h3>
+        @foreach (var grade in publishedGrades)
+        {
+            var analysis = Model.Analyses.FirstOrDefault(a => a.SubjectName == grade.SubjectName);
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden mb-4" data-aos="fade-up">
+                <!-- Card Header -->
+                <div class="px-6 py-4 border-b border-slate-100">
+                    <div class="flex items-start justify-between flex-wrap gap-3">
+                        <div class="flex items-start gap-3">
+                            <div class="w-10 h-10 bg-fpt-navy/10 rounded-xl flex items-center justify-center flex-shrink-0">
+                                <i data-lucide="book-open" class="w-5 h-5 text-fpt-navy"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-slate-800">@grade.SubjectName</h3>
+                                <p class="text-xs text-slate-400 mt-0.5">
+                                    <span class="font-mono bg-slate-100 px-1.5 py-0.5 rounded">@grade.SubjectCode</span>
+                                    &nbsp;·&nbsp; @grade.SemesterName
+                                </p>
+                                @if (grade.PublishedAt.HasValue)
+                                {
+                                    <p class="text-xs text-slate-400 mt-0.5">Công bố: @grade.PublishedAt.Value.ToString("dd/MM/yyyy HH:mm")</p>
+                                }
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <!-- Result Badge -->
+                            @if (grade.GPA.HasValue)
+                            {
+                                <span class="inline-flex items-center gap-1.5 text-sm font-bold px-3 py-1.5 rounded-full
+                                    @(grade.IsPassed ? "bg-teal-100 text-teal-700" : "bg-red-100 text-red-600")">
+                                    <i data-lucide="@(grade.IsPassed ? "check-circle" : "x-circle")" class="w-4 h-4"></i>
+                                    @grade.ResultText
+                                </span>
+                            }
+                            <!-- Status Badge -->
+                            <span class="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full
+                                @(grade.Status == 2 ? "bg-teal-100 text-teal-700" :
+                                  grade.Status == 3 ? "bg-sky-100 text-sky-700" : "bg-amber-100 text-amber-700")">
+                                @grade.StatusName
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Scores Display -->
+                <div class="px-6 py-5">
+                    <div class="flex items-center gap-8 flex-wrap">
+                        <div class="text-center">
+                            <p class="text-xs text-slate-400 uppercase tracking-wider mb-1">Giữa kỳ</p>
+                            <div class="w-16 h-16 rounded-2xl bg-slate-50 border-2 border-slate-200 flex items-center justify-center">
+                                <p class="text-xl font-black text-slate-700">@(grade.MidtermScore?.ToString("F1") ?? "—")</p>
+                            </div>
+                            <p class="text-xs text-slate-400 mt-1">× 40%</p>
+                        </div>
+                        <div class="text-slate-200 text-2xl font-light">+</div>
+                        <div class="text-center">
+                            <p class="text-xs text-slate-400 uppercase tracking-wider mb-1">Cuối kỳ</p>
+                            <div class="w-16 h-16 rounded-2xl bg-slate-50 border-2 border-slate-200 flex items-center justify-center">
+                                <p class="text-xl font-black text-slate-700">@(grade.FinalScore?.ToString("F1") ?? "—")</p>
+                            </div>
+                            <p class="text-xs text-slate-400 mt-1">× 60%</p>
+                        </div>
+                        <div class="text-slate-200 text-2xl font-light">=</div>
+                        <div class="text-center">
+                            <p class="text-xs text-slate-400 uppercase tracking-wider mb-1">GPA</p>
+                            <div class="w-20 h-20 rounded-2xl flex items-center justify-center
+                                @(grade.GPA >= 8 ? "bg-teal-500" : grade.GPA >= 5 ? "bg-teal-400" : grade.GPA.HasValue ? "bg-red-500" : "bg-slate-200")">
+                                <p class="text-2xl font-black text-white">@(grade.GPA?.ToString("F2") ?? "—")</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- AI Analysis Section -->
+                    @if (analysis != null)
+                    {
+                        <div class="mt-5 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 rounded-xl">
+                            <div class="flex items-start gap-3">
+                                <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                                    <i data-lucide="sparkles" class="w-4 h-4 text-white"></i>
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex items-center justify-between mb-1">
+                                        <p class="text-sm font-bold text-blue-700">Phân tích AI</p>
+                                        <span class="text-xs text-blue-400">@analysis.CreatedAt.ToString("dd/MM/yyyy")</span>
+                                    </div>
+                                    <p class="text-sm text-slate-600 leading-relaxed">@analysis.AnalysisText</p>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+}
+
+<!-- Draft Grades (hidden by default) -->
+@if (draftGrades.Any())
+{
+    <div id="draft-section" class="hidden">
+        <h3 class="text-slate-600 font-semibold text-sm uppercase tracking-wider mb-3 flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-amber-500 inline-block"></span>
+            Điểm chưa công bố (nháp)
+        </h3>
+        @foreach (var grade in draftGrades)
+        {
+            var analysis = Model.Analyses.FirstOrDefault(a => a.SubjectName == grade.SubjectName);
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden mb-4 opacity-80 border-dashed border-amber-200" data-aos="fade-up">
+                <div class="px-6 py-4 border-b border-dashed border-amber-100 bg-amber-50/30">
+                    <div class="flex items-center justify-between flex-wrap gap-3">
+                        <div class="flex items-start gap-3">
+                            <div class="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                                <i data-lucide="file-edit" class="w-5 h-5 text-amber-500"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-slate-800">@grade.SubjectName</h3>
+                                <p class="text-xs text-slate-400 mt-0.5">
+                                    <span class="font-mono bg-slate-100 px-1.5 py-0.5 rounded">@grade.SubjectCode</span>
+                                    &nbsp;·&nbsp; @grade.SemesterName
+                                </p>
+                            </div>
+                        </div>
+                        <span class="inline-flex items-center gap-1.5 text-xs font-bold text-amber-700 bg-amber-100 px-3 py-1.5 rounded-full">
+                            <i data-lucide="clock" class="w-3.5 h-3.5"></i>
+                            Nháp - Chưa công bố
+                        </span>
+                    </div>
+                </div>
+                <div class="px-6 py-4">
+                    <div class="flex items-center gap-6 flex-wrap">
+                        <div class="text-center">
+                            <p class="text-xs text-slate-400 mb-1">Giữa kỳ</p>
+                            <p class="text-xl font-black text-slate-700">@(grade.MidtermScore?.ToString("F1") ?? "—")</p>
+                        </div>
+                        <div class="text-center">
+                            <p class="text-xs text-slate-400 mb-1">Cuối kỳ</p>
+                            <p class="text-xl font-black text-slate-700">@(grade.FinalScore?.ToString("F1") ?? "—")</p>
+                        </div>
+                        <div class="text-center">
+                            <p class="text-xs text-slate-400 mb-1">GPA</p>
+                            <p class="text-3xl font-black text-slate-600">@(grade.GPA?.ToString("F2") ?? "—")</p>
+                        </div>
+                        <p class="text-xs text-amber-600 bg-amber-50 px-3 py-2 rounded-xl border border-amber-100">
+                            <i data-lucide="info" class="w-3.5 h-3.5 inline-block mr-1"></i>
+                            Điểm này chưa chính thức, có thể thay đổi
+                        </p>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+<!-- Empty State -->
+@if (!Model.Grades.Any())
+{
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center justify-center py-24 text-center" data-aos="fade-up">
+        <div class="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mb-5">
+            <i data-lucide="star" class="w-10 h-10 text-slate-300"></i>
+        </div>
+        <h3 class="text-slate-500 font-semibold text-lg">Chưa có điểm số</h3>
+        <p class="text-slate-400 text-sm mt-2 max-w-sm">Điểm số sẽ xuất hiện khi giảng viên nhập và công bố điểm</p>
+    </div>
+}
+
+@section Scripts {
+<script>
+    function toggleDraft(checkbox) {
+        const section = document.getElementById('draft-section');
+        if (section) section.classList.toggle('hidden', !checkbox.checked);
+    }
+
+    // SignalR: listen for grade updates
+    (async function() {
+        try {
+            const userId = @(Model.CurrentUserId ?? 0);
+            const gradeConn = signalRManager.get('grade');
+            if (gradeConn) {
+                gradeConn.on('GradeUpdated', data => {
+                    showToast('Điểm của bạn vừa được cập nhật!', 'info');
+                });
+                gradeConn.on('GradesPublished', data => {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Điểm đã được công bố!',
+                        text: 'Giảng viên vừa công bố kết quả điểm số của bạn.',
+                        confirmButtonColor: '#002E5D',
+                        confirmButtonText: 'Xem điểm'
+                    }).then(() => location.reload());
+                });
+            }
+        } catch(e) { console.warn('SignalR grade error:', e); }
+    })();
+</script>
+}

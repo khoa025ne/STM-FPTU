@@ -1,0 +1,241 @@
+@page
+@model FPT_SM.Web.Pages.Teacher.DashboardModel
+@{
+    Layout = "_TeacherLayout";
+    ViewData["Title"] = "Dashboard - Giáo viên";
+    var data = Model.DashboardData;
+}
+
+<!-- Welcome Banner -->
+<div class="bg-gradient-to-r from-fpt-navy to-blue-700 rounded-2xl p-6 mb-8 flex items-center justify-between" data-aos="fade-down">
+    <div>
+        <p class="text-white/70 text-sm mb-1">Xin chào 👋</p>
+        <h2 class="text-white font-black text-2xl">@(Model.CurrentFullName ?? "Giáo viên")</h2>
+        <p class="text-white/60 text-sm mt-1">Hôm nay bạn có <span class="text-fpt-orange font-bold">@(data?.ClassesToday ?? 0)</span> lớp học</p>
+    </div>
+    <div class="hidden sm:flex items-center gap-2">
+        <div class="w-16 h-16 bg-white/10 rounded-2xl flex items-center justify-center">
+            <i data-lucide="book-open" class="w-8 h-8 text-white"></i>
+        </div>
+    </div>
+</div>
+
+<!-- Stats Cards -->
+<div class="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-8">
+    <!-- Lớp đang dạy -->
+    <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 hover:shadow-md transition-shadow" data-aos="fade-up" data-aos-delay="0">
+        <div class="w-10 h-10 bg-fpt-navy/10 rounded-xl flex items-center justify-center mb-3">
+            <i data-lucide="graduation-cap" class="w-5 h-5 text-fpt-navy"></i>
+        </div>
+        <p class="text-slate-500 text-xs font-medium">Lớp đang dạy</p>
+        <p class="text-2xl font-black text-fpt-navy mt-1">@(data?.TotalClasses ?? 0)</p>
+        <p class="text-xs text-slate-400 mt-0.5">@(data?.TotalStudents ?? 0) sinh viên</p>
+    </div>
+
+    <!-- SV cần điểm danh -->
+    <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 hover:shadow-md transition-shadow" data-aos="fade-up" data-aos-delay="60">
+        <div class="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center mb-3">
+            <i data-lucide="user-check" class="w-5 h-5 text-amber-500"></i>
+        </div>
+        <p class="text-slate-500 text-xs font-medium">SV cần điểm danh</p>
+        <p class="text-2xl font-black text-amber-500 mt-1">@(data?.StudentsNeedingAttention ?? 0)</p>
+        <p class="text-xs text-slate-400 mt-0.5">Hôm nay</p>
+    </div>
+
+    <!-- Điểm chưa nhập -->
+    <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 hover:shadow-md transition-shadow" data-aos="fade-up" data-aos-delay="120">
+        <div class="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center mb-3">
+            <i data-lucide="file-edit" class="w-5 h-5 text-red-500"></i>
+        </div>
+        <p class="text-slate-500 text-xs font-medium">Điểm chưa nhập</p>
+        <p class="text-2xl font-black text-red-500 mt-1">@(data?.UnpublishedGrades ?? 0)</p>
+        <p class="text-xs text-slate-400 mt-0.5">Cần xử lý</p>
+    </div>
+
+    <!-- Quiz đang mở -->
+    <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 hover:shadow-md transition-shadow" data-aos="fade-up" data-aos-delay="180">
+        <div class="w-10 h-10 bg-teal-100 rounded-xl flex items-center justify-center mb-3">
+            <i data-lucide="clipboard-list" class="w-5 h-5 text-teal-500"></i>
+        </div>
+        <p class="text-slate-500 text-xs font-medium">Quiz đang mở</p>
+        <p class="text-2xl font-black text-teal-600 mt-1">@(data?.ActiveQuizzes ?? 0)</p>
+        <p class="text-xs text-slate-400 mt-0.5">Đang diễn ra</p>
+    </div>
+</div>
+
+<!-- Main Content -->
+<div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+    <!-- My Classes Table -->
+    <div class="xl:col-span-2 bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden" data-aos="fade-up" data-aos-delay="100">
+        <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+            <div>
+                <h3 class="font-bold text-slate-800">Danh sách lớp đang dạy</h3>
+                <p class="text-slate-400 text-xs mt-0.5">Các lớp học của bạn trong học kỳ này</p>
+            </div>
+            <a href="/Teacher/Classes" class="text-xs text-fpt-orange hover:underline font-medium">Xem tất cả</a>
+        </div>
+
+        @if (data?.MyClasses?.Any() == true)
+        {
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="bg-slate-50 text-left">
+                            <th class="px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Lớp học</th>
+                            <th class="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Môn học</th>
+                            <th class="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Lịch</th>
+                            <th class="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Sĩ số</th>
+                            <th class="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Trạng thái</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-50">
+                        @foreach (var cls in data.MyClasses.Take(8))
+                        {
+                            <tr class="hover:bg-slate-50 transition-colors cursor-pointer" onclick="window.location='/Teacher/Classes/@cls.Id'">
+                                <td class="px-6 py-3.5">
+                                    <p class="font-semibold text-slate-700">@cls.Name</p>
+                                    @if (!string.IsNullOrEmpty(cls.RoomNumber))
+                                    {
+                                        <p class="text-xs text-slate-400">Phòng @cls.RoomNumber</p>
+                                    }
+                                </td>
+                                <td class="px-4 py-3.5">
+                                    <p class="font-medium text-fpt-navy text-xs">@cls.SubjectCode</p>
+                                    <p class="text-xs text-slate-400 truncate max-w-[120px]">@cls.SubjectName</p>
+                                </td>
+                                <td class="px-4 py-3.5">
+                                    <p class="text-xs font-medium text-slate-600">@cls.DayName</p>
+                                    <p class="text-xs text-slate-400">@cls.StartTime.ToString(@"hh\:mm") - @cls.EndTime.ToString(@"hh\:mm")</p>
+                                </td>
+                                <td class="px-4 py-3.5">
+                                    <div class="flex items-center gap-1.5">
+                                        <div class="flex-1 h-1.5 bg-slate-100 rounded-full max-w-[60px]">
+                                            <div class="h-1.5 bg-fpt-orange rounded-full"
+                                                 style="width: @(cls.Capacity > 0 ? Math.Min(100, cls.Enrolled * 100 / cls.Capacity) : 0)%"></div>
+                                        </div>
+                                        <span class="text-xs text-slate-500">@cls.Enrolled/@cls.Capacity</span>
+                                    </div>
+                                </td>
+                                <td class="px-4 py-3.5">
+                                    <span class="text-xs font-semibold px-2.5 py-1 rounded-full
+                                        @(cls.StatusColor == "teal" ? "bg-teal-100 text-teal-700" :
+                                          cls.StatusColor == "sky"  ? "bg-sky-100 text-sky-700" :
+                                          cls.StatusColor == "red"  ? "bg-red-100 text-red-700" : "bg-slate-100 text-slate-600")">
+                                        @cls.StatusName
+                                    </span>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        else
+        {
+            <div class="flex flex-col items-center justify-center py-16 text-center">
+                <div class="w-14 h-14 bg-slate-50 rounded-full flex items-center justify-center mb-3">
+                    <i data-lucide="book-open" class="w-7 h-7 text-slate-300"></i>
+                </div>
+                <p class="text-slate-500 font-medium">Chưa có lớp nào</p>
+                <p class="text-slate-400 text-xs mt-1">Bạn chưa được phân công lớp nào</p>
+            </div>
+        }
+    </div>
+
+    <!-- Attendance Alerts -->
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden" data-aos="fade-up" data-aos-delay="200">
+        <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+            <div>
+                <h3 class="font-bold text-slate-800">Cảnh báo vắng mặt</h3>
+                <p class="text-slate-400 text-xs mt-0.5">Sinh viên cần chú ý</p>
+            </div>
+            @if (data?.AttendanceAlerts?.Any() == true)
+            {
+                <span class="w-6 h-6 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold">
+                    @data.AttendanceAlerts.Count
+                </span>
+            }
+        </div>
+
+        <div class="divide-y divide-slate-50 max-h-[400px] overflow-y-auto">
+            @if (data?.AttendanceAlerts?.Any() == true)
+            {
+                @foreach (var alert in data.AttendanceAlerts.Take(10))
+                {
+                    <div class="px-6 py-3.5 flex items-start gap-3 @(alert.IsFailed ? "bg-red-50/50" : "hover:bg-slate-50") transition-colors">
+                        <div class="w-8 h-8 rounded-full @(alert.IsFailed ? "bg-red-100" : "bg-amber-100") flex items-center justify-center flex-shrink-0">
+                            <i data-lucide="@(alert.IsFailed ? "x-circle" : "alert-triangle")"
+                               class="w-4 h-4 @(alert.IsFailed ? "text-red-500" : "text-amber-500")"></i>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-semibold text-slate-700 truncate">@alert.StudentName</p>
+                            @if (!string.IsNullOrEmpty(alert.RollNumber))
+                            {
+                                <p class="text-xs text-slate-400">@alert.RollNumber</p>
+                            }
+                            <p class="text-xs text-slate-500 truncate">@alert.ClassName</p>
+                        </div>
+                        <div class="flex-shrink-0 text-right">
+                            <span class="text-sm font-bold @(alert.IsFailed ? "text-red-600" : "text-amber-600")">
+                                @alert.AbsentCount
+                            </span>
+                            <p class="text-xs @(alert.IsFailed ? "text-red-400" : "text-amber-400")">buổi</p>
+                        </div>
+                    </div>
+                }
+            }
+            else
+            {
+                <div class="flex flex-col items-center justify-center py-12 text-center">
+                    <div class="w-12 h-12 bg-teal-50 rounded-full flex items-center justify-center mb-3">
+                        <i data-lucide="check-circle" class="w-6 h-6 text-teal-400"></i>
+                    </div>
+                    <p class="text-slate-500 font-medium text-sm">Không có cảnh báo</p>
+                    <p class="text-slate-400 text-xs mt-1">Tất cả sinh viên đi học đầy đủ</p>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    // SignalR - Listen for real-time Admin updates
+    (async function () {
+        try {
+            const conn = await signalRManager.connect('notification', '/hubs/notification');
+            await conn.invoke('JoinGroup', 'teacher_all');
+
+            // Listen for user updates from Admin
+            conn.on('UserUpdated', async function (data) {
+                showToast('Cập nhật người dùng', `Người dùng: ${data.action}`, 'info');
+                await new Promise(r => setTimeout(r, 1000));
+                window.location.reload();
+            });
+
+            // Listen for semester updates from Admin
+            conn.on('SemesterUpdated', async function (data) {
+                showToast('Cập nhật học kỳ', `Hành động: ${data.action}`, 'info');
+                await new Promise(r => setTimeout(r, 1000));
+                window.location.reload();
+            });
+
+            // Listen for subject updates from Admin
+            conn.on('SubjectUpdated', async function (data) {
+                showToast('Cập nhật môn học', `Môn: ${data.name} - ${data.action}`, 'info');
+                await new Promise(r => setTimeout(r, 1000));
+                window.location.reload();
+            });
+
+            // Listen for enrollment changes from Students
+            conn.on('EnrollmentChanged', async function (data) {
+                const action = data.action === 'enroll' ? 'Sinh viên đăng ký' : 'Sinh viên rút môn';
+                showToast(action, `${data.studentName} - ${data.className}`, 'info');
+                await new Promise(r => setTimeout(r, 1000));
+                window.location.reload();
+            });
+
+        } catch (e) { console.warn('SignalR not connected', e); }
+    })();
+</script>
+}

@@ -1,0 +1,254 @@
+@page "/Student/Quizzes/Take/{id:int}"
+@model FPT_SM.Web.Pages.Student.Quizzes.TakeModel
+@{
+    Layout = "_StudentLayout";
+    ViewData["Title"] = "Làm bài - " + Model.Quiz?.Title;
+    var quiz = Model.Quiz;
+    var totalQuestions = quiz?.Questions?.Count ?? 0;
+}
+
+@if (quiz == null)
+{
+    <div class="text-center py-16">
+        <p class="text-slate-500">Không tìm thấy quiz.</p>
+        <a href="/Student/Quizzes" class="mt-3 inline-block text-fpt-orange hover:underline">← Quay lại</a>
+    </div>
+    return;
+}
+
+<!-- Quiz Header -->
+<div class="bg-gradient-to-r from-fpt-navy to-blue-700 rounded-2xl p-5 mb-6 text-white" data-aos="fade-down">
+    <div class="flex items-start justify-between gap-4">
+        <div>
+            <p class="text-white/60 text-xs mb-1">Bài kiểm tra</p>
+            <h1 class="font-black text-xl">@quiz.Title</h1>
+            <p class="text-white/70 text-sm mt-1">@quiz.SubjectName · @quiz.ClassName</p>
+        </div>
+        <div class="flex-shrink-0 text-right">
+            <p class="text-white/60 text-xs mb-1">Thời gian còn lại</p>
+            <div id="timerDisplay" class="text-3xl font-black tabular-nums">@quiz.DurationMinutes:00</div>
+            <p class="text-white/60 text-xs mt-1" id="timerLabel">phút</p>
+        </div>
+    </div>
+    <!-- Progress Bar -->
+    <div class="mt-4">
+        <div class="flex items-center justify-between text-xs text-white/60 mb-1.5">
+            <span>Tiến độ</span>
+            <span id="progressText">0 / @totalQuestions câu đã trả lời</span>
+        </div>
+        <div class="h-2 bg-white/20 rounded-full">
+            <div id="progressBar" class="h-2 bg-fpt-orange rounded-full transition-all" style="width: 0%"></div>
+        </div>
+    </div>
+</div>
+
+<form method="post" asp-page-handler="Submit" id="quizForm">
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="dto.SubmissionId" value="@Model.SubmissionId" />
+
+    <div class="flex gap-6">
+        <!-- Questions List -->
+        <div class="flex-1 space-y-5" id="questionsArea">
+            @for (int qi = 0; qi < quiz.Questions.Count; qi++)
+            {
+                var q = quiz.Questions[qi];
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 question-card" id="q_@q.Id" data-aos="fade-up" data-aos-delay="@(qi * 30)">
+                    <div class="flex items-start gap-3 mb-4">
+                        <div class="w-8 h-8 rounded-xl bg-fpt-navy text-white text-sm font-black flex items-center justify-center flex-shrink-0">
+                            @(qi + 1)
+                        </div>
+                        <p class="text-slate-800 font-semibold text-base pt-1">@q.QuestionText</p>
+                    </div>
+                    <input type="hidden" name="dto.Answers[@qi].QuestionId" value="@q.Id" />
+
+                    <div class="space-y-2 ml-11">
+                        @{
+                            var labels = new[] { "A", "B", "C", "D" };
+                        }
+                        @for (int oi = 0; oi < q.Options.Count; oi++)
+                        {
+                            var opt = q.Options[oi];
+                            var label = oi < labels.Length ? labels[oi] : (oi + 1).ToString();
+                            <label class="option-label flex items-center gap-3 p-3 border-2 border-slate-100 rounded-xl cursor-pointer hover:border-fpt-orange/40 hover:bg-orange-50/50 transition-all group"
+                                   data-qid="@q.Id" data-oid="@opt.Id">
+                                <div class="w-8 h-8 rounded-lg bg-slate-100 group-hover:bg-fpt-orange/10 flex items-center justify-center flex-shrink-0 font-bold text-slate-500 text-sm transition-colors option-letter">
+                                    @label
+                                </div>
+                                <span class="text-slate-700 text-sm">@opt.OptionText</span>
+                                <input type="radio" name="dto.Answers[@qi].SelectedOptionIds[0]"
+                                       value="@opt.Id"
+                                       class="hidden option-radio"
+                                       data-qi="@qi" data-qid="@q.Id"
+                                       onchange="onAnswerChanged(@qi, @q.Id, @opt.Id, this)" />
+                            </label>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+
+        <!-- Navigator Sidebar -->
+        <div class="w-48 flex-shrink-0">
+            <div class="sticky top-4 bg-white rounded-2xl shadow-sm border border-slate-100 p-4">
+                <p class="text-xs font-bold text-slate-600 mb-3">Điều hướng câu hỏi</p>
+                <div class="grid grid-cols-5 gap-1.5" id="navGrid">
+                    @for (int qi = 0; qi < quiz.Questions.Count; qi++)
+                    {
+                        var q = quiz.Questions[qi];
+                        <button type="button"
+                                onclick="scrollToQuestion('@q.Id')"
+                                id="nav_@q.Id"
+                                class="w-7 h-7 rounded-lg text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-orange-100 hover:text-fpt-orange transition-colors nav-btn">
+                            @(qi + 1)
+                        </button>
+                    }
+                </div>
+                <div class="mt-3 space-y-1.5">
+                    <div class="flex items-center gap-2 text-xs text-slate-500">
+                        <div class="w-4 h-4 rounded bg-orange-100 border border-fpt-orange"></div>
+                        Đã trả lời
+                    </div>
+                    <div class="flex items-center gap-2 text-xs text-slate-500">
+                        <div class="w-4 h-4 rounded bg-slate-100"></div>
+                        Chưa trả lời
+                    </div>
+                </div>
+
+                <button type="button" onclick="confirmSubmit()"
+                        class="w-full mt-4 flex items-center justify-center gap-2 bg-fpt-orange hover:bg-orange-600 text-white text-sm font-bold py-2.5 rounded-xl transition-colors">
+                    <i data-lucide="send" class="w-4 h-4"></i>
+                    Nộp bài
+                </button>
+            </div>
+        </div>
+    </div>
+</form>
+
+@section Scripts {
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+    const DURATION_SECONDS = @quiz.DurationMinutes * 60;
+    const QUIZ_ID = @quiz.Id;
+    const STORAGE_KEY = `quiz_start_${QUIZ_ID}_@Model.SubmissionId`;
+
+    let answeredCount = 0;
+    const totalQ = @totalQuestions;
+
+    // Timer
+    function startTimer() {
+        let startTime = localStorage.getItem(STORAGE_KEY);
+        if (!startTime) {
+            startTime = Date.now().toString();
+            localStorage.setItem(STORAGE_KEY, startTime);
+        }
+        updateTimer(parseInt(startTime));
+    }
+
+    function updateTimer(startTime) {
+        const elapsed = Math.floor((Date.now() - startTime) / 1000);
+        const remaining = Math.max(0, DURATION_SECONDS - elapsed);
+        const mins = Math.floor(remaining / 60);
+        const secs = remaining % 60;
+        const display = document.getElementById('timerDisplay');
+        if (display) {
+            display.textContent = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+        }
+        const label = document.getElementById('timerLabel');
+
+        if (remaining <= 300) { // < 5 minutes
+            display?.classList.remove('text-white');
+            display?.classList.add('text-amber-300');
+            if (label) label.textContent = 'Sắp hết giờ!';
+        }
+        if (remaining <= 60) {
+            display?.classList.remove('text-amber-300');
+            display?.classList.add('text-red-300', 'animate-pulse');
+        }
+
+        if (remaining <= 0) {
+            autoSubmit();
+            return;
+        }
+        setTimeout(() => updateTimer(startTime), 1000);
+    }
+
+    function autoSubmit() {
+        const display = document.getElementById('timerDisplay');
+        if (display) display.textContent = '00:00';
+        localStorage.removeItem(STORAGE_KEY);
+        document.getElementById('quizForm').submit();
+    }
+
+    // Answer handling
+    function onAnswerChanged(qi, qid, oid, radio) {
+        const labels = document.querySelectorAll(`.option-label[data-qid="${qid}"]`);
+        labels.forEach(lbl => {
+            lbl.classList.remove('border-fpt-orange', 'bg-orange-50');
+            lbl.classList.add('border-slate-100');
+            const letter = lbl.querySelector('.option-letter');
+            if (letter) {
+                letter.classList.remove('bg-fpt-orange', 'text-white');
+                letter.classList.add('bg-slate-100', 'text-slate-500');
+            }
+        });
+
+        const selected = document.querySelector(`.option-label[data-qid="${qid}"][data-oid="${oid}"]`);
+        if (selected) {
+            selected.classList.add('border-fpt-orange', 'bg-orange-50');
+            selected.classList.remove('border-slate-100');
+            const letter = selected.querySelector('.option-letter');
+            if (letter) {
+                letter.classList.add('bg-fpt-orange', 'text-white');
+                letter.classList.remove('bg-slate-100', 'text-slate-500');
+            }
+        }
+
+        // Update nav
+        const navBtn = document.getElementById(`nav_${qid}`);
+        if (navBtn) {
+            navBtn.classList.add('bg-orange-100', 'text-fpt-orange', 'border', 'border-fpt-orange/40');
+            navBtn.classList.remove('bg-slate-100', 'text-slate-600');
+        }
+
+        // Count answered
+        updateProgress();
+    }
+
+    function updateProgress() {
+        const answered = document.querySelectorAll('.option-radio:checked').length;
+        const pct = totalQ > 0 ? (answered / totalQ * 100) : 0;
+        document.getElementById('progressBar').style.width = pct + '%';
+        document.getElementById('progressText').textContent = `${answered} / ${totalQ} câu đã trả lời`;
+    }
+
+    function scrollToQuestion(qid) {
+        const el = document.getElementById(`q_${qid}`);
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    async function confirmSubmit() {
+        const answered = document.querySelectorAll('.option-radio:checked').length;
+        const unanswered = totalQ - answered;
+
+        const result = await Swal.fire({
+            title: 'Bạn chắc chắn muốn nộp bài?',
+            html: unanswered > 0
+                ? `<p class="text-slate-600">Còn <strong class="text-red-500">${unanswered}</strong> câu chưa trả lời.</p><p class="text-slate-500 text-sm mt-1">Sau khi nộp không thể chỉnh sửa.</p>`
+                : `<p class="text-slate-600">Bạn đã trả lời tất cả <strong class="text-teal-500">${totalQ}</strong> câu hỏi.</p>`,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#f97316',
+            cancelButtonColor: '#94a3b8',
+            confirmButtonText: 'Nộp bài',
+            cancelButtonText: 'Xem lại'
+        });
+
+        if (result.isConfirmed) {
+            localStorage.removeItem(STORAGE_KEY);
+            document.getElementById('quizForm').submit();
+        }
+    }
+
+    startTimer();
+</script>
+}

@@ -1,0 +1,249 @@
+@page
+@model FPT_SM.Web.Pages.Admin.Users.EditModel
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = $"Sửa: {Model.User?.FullName ?? "Người dùng"}";
+}
+
+<!-- Breadcrumb -->
+<nav class="flex items-center gap-2 text-sm text-slate-400 mb-6" data-aos="fade-down">
+    <a href="/Admin/Users" class="hover:text-fpt-navy transition-colors">Quản lý tài khoản</a>
+    <i data-lucide="chevron-right" class="w-4 h-4"></i>
+    <span class="text-slate-600 font-medium">Sửa thông tin</span>
+</nav>
+
+@if (Model.User == null)
+{
+    <div class="text-center py-20 text-slate-400">
+        <i data-lucide="user-x" class="w-12 h-12 mx-auto mb-3 opacity-30"></i>
+        <p class="font-medium">Không tìm thấy người dùng</p>
+        <a href="/Admin/Users" class="text-fpt-orange text-sm mt-2 inline-block hover:underline">Quay lại danh sách</a>
+    </div>
+}
+else
+{
+    var roleBadge = Model.User.RoleId switch {
+        1 => "bg-fpt-navy text-white",
+        2 => "bg-purple-100 text-purple-700",
+        3 => "bg-sky-100 text-sky-700",
+        4 => "bg-teal-100 text-teal-700",
+        _ => "bg-slate-100 text-slate-600"
+    };
+    var roleLabel = Model.User.RoleId switch {
+        1 => "Admin",
+        2 => "Manager",
+        3 => "Giảng viên",
+        4 => "Sinh viên",
+        _ => Model.User.RoleName
+    };
+
+    <div class="max-w-2xl mx-auto space-y-5" data-aos="fade-up">
+
+        <!-- User Identity Card -->
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 flex items-center gap-4">
+            @if (!string.IsNullOrEmpty(Model.User.AvatarUrl))
+            {
+                <img src="@Model.User.AvatarUrl" class="w-16 h-16 rounded-full object-cover flex-shrink-0 ring-2 ring-fpt-orange/30" alt="Avatar" />
+            }
+            else
+            {
+                <div class="w-16 h-16 rounded-full bg-gradient-to-br from-fpt-navy to-blue-700 flex items-center justify-center text-white text-2xl font-black flex-shrink-0 ring-2 ring-fpt-orange/30">
+                    @Model.User.FullName.FirstOrDefault()
+                </div>
+            }
+            <div class="flex-1 min-w-0">
+                <h3 class="font-bold text-slate-800 text-lg truncate">@Model.User.FullName</h3>
+                <p class="text-slate-400 text-sm">@Model.User.Email</p>
+                <div class="flex items-center gap-2 mt-1.5">
+                    <span class="text-xs font-semibold px-2.5 py-0.5 rounded-full @roleBadge">@roleLabel</span>
+                    @if (!string.IsNullOrEmpty(Model.User.RollNumber))
+                    {
+                        <span class="text-xs font-mono bg-slate-100 text-slate-600 px-2 py-0.5 rounded">@Model.User.RollNumber</span>
+                    }
+                    <span class="text-xs font-semibold px-2.5 py-0.5 rounded-full @(Model.User.IsActive ? "bg-teal-100 text-teal-700" : "bg-red-100 text-red-600")">
+                        @(Model.User.IsActive ? "Hoạt động" : "Bị khóa")
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Form -->
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+            <div class="bg-gradient-to-r from-fpt-navy to-blue-800 px-6 py-4">
+                <div class="flex items-center gap-3">
+                    <i data-lucide="edit-3" class="w-5 h-5 text-white"></i>
+                    <h2 class="text-white font-bold">Cập nhật thông tin</h2>
+                </div>
+            </div>
+
+            <form method="post" class="p-6 space-y-5">
+                @Html.AntiForgeryToken()
+                <input type="hidden" asp-for="Id" />
+
+                <!-- Validation Summary -->
+                @if (!ViewData.ModelState.IsValid)
+                {
+                    <div class="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3">
+                        <i data-lucide="alert-circle" class="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5"></i>
+                        <div>
+                            <p class="text-sm font-semibold text-red-700 mb-1">Vui lòng kiểm tra lại:</p>
+                            <ul class="text-sm text-red-600 space-y-0.5">
+                                @foreach (var error in ViewData.ModelState.Values.SelectMany(v => v.Errors))
+                                {
+                                    <li>• @error.ErrorMessage</li>
+                                }
+                            </ul>
+                        </div>
+                    </div>
+                }
+
+                <!-- Họ và tên -->
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-1.5">
+                        Họ và tên <span class="text-red-500">*</span>
+                    </label>
+                    <input asp-for="Input.FullName" type="text"
+                           class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-fpt-navy/20 focus:border-fpt-navy/40 text-sm transition-all" />
+                    <span asp-validation-for="Input.FullName" class="text-xs text-red-500 mt-1 block"></span>
+                </div>
+
+                <!-- Email (readonly) -->
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-1.5">Email</label>
+                    <input type="text" value="@Model.User.Email" readonly
+                           class="w-full px-4 py-2.5 rounded-xl border border-slate-100 bg-slate-50 text-slate-400 text-sm cursor-not-allowed" />
+                    <p class="text-xs text-slate-400 mt-1">Email không thể thay đổi.</p>
+                </div>
+
+                <!-- Vai trò (readonly) -->
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-1.5">Vai trò</label>
+                    <div class="w-full px-4 py-2.5 rounded-xl border border-slate-100 bg-slate-50 text-sm flex items-center gap-2">
+                        <span class="text-xs font-semibold px-2.5 py-1 rounded-full @roleBadge">@roleLabel</span>
+                        <span class="text-slate-400">Vai trò không thể thay đổi tại đây.</span>
+                    </div>
+                </div>
+
+                <!-- Avatar URL -->
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-1.5">URL Ảnh đại diện</label>
+                    <input asp-for="Input.AvatarUrl" type="url" placeholder="https://example.com/avatar.jpg"
+                           class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-fpt-navy/20 focus:border-fpt-navy/40 text-sm transition-all" />
+                    <span asp-validation-for="Input.AvatarUrl" class="text-xs text-red-500 mt-1 block"></span>
+                </div>
+
+                <!-- Số dư ví -->
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-1.5">Số dư ví (VND)</label>
+                    <input asp-for="Input.WalletBalance" type="number" min="0" step="1000"
+                           class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-fpt-navy/20 focus:border-fpt-navy/40 text-sm transition-all" />
+                    <span asp-validation-for="Input.WalletBalance" class="text-xs text-red-500 mt-1 block"></span>
+                </div>
+
+                <!-- Trạng thái -->
+                <div class="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-200">
+                    <div>
+                        <p class="text-sm font-semibold text-slate-700">Trạng thái tài khoản</p>
+                        <p class="text-xs text-slate-400 mt-0.5">Tắt để khóa tài khoản này</p>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input asp-for="Input.IsActive" type="checkbox" class="sr-only peer" />
+                        <div class="w-11 h-6 bg-slate-300 peer-focus:ring-2 peer-focus:ring-fpt-navy/30 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-teal-500"></div>
+                    </label>
+                </div>
+
+                <!-- Đổi mật khẩu section -->
+                <div class="border border-dashed border-amber-300 rounded-xl p-4 bg-amber-50/50">
+                    <button type="button" id="togglePwdSection"
+                            class="flex items-center gap-2 text-sm font-semibold text-amber-700 hover:text-amber-800 transition-colors w-full text-left">
+                        <i data-lucide="key" class="w-4 h-4"></i>
+                        Đổi mật khẩu (tùy chọn)
+                        <i data-lucide="chevron-down" class="w-4 h-4 ml-auto transition-transform" id="pwdChevron"></i>
+                    </button>
+                    <div id="pwdSection" class="hidden mt-4 space-y-4">
+                        <p class="text-xs text-amber-600">Để trống nếu không muốn thay đổi mật khẩu.</p>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-700 mb-1.5">Mật khẩu mới</label>
+                                <div class="relative">
+                                    <input asp-for="Input.NewPassword" type="password" id="newPwdInput" placeholder="Tối thiểu 8 ký tự"
+                                           class="w-full px-4 py-2.5 pr-10 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-200 text-sm transition-all" />
+                                    <button type="button" onclick="togglePwd('newPwdInput', this)" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">
+                                        <i data-lucide="eye" class="w-4 h-4"></i>
+                                    </button>
+                                </div>
+                                <span asp-validation-for="Input.NewPassword" class="text-xs text-red-500 mt-1 block"></span>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-700 mb-1.5">Xác nhận mật khẩu mới</label>
+                                <div class="relative">
+                                    <input asp-for="Input.ConfirmNewPassword" type="password" id="confirmNewPwdInput" placeholder="Nhập lại mật khẩu mới"
+                                           class="w-full px-4 py-2.5 pr-10 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-200 text-sm transition-all" />
+                                    <button type="button" onclick="togglePwd('confirmNewPwdInput', this)" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">
+                                        <i data-lucide="eye" class="w-4 h-4"></i>
+                                    </button>
+                                </div>
+                                <span asp-validation-for="Input.ConfirmNewPassword" class="text-xs text-red-500 mt-1 block"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <hr class="border-slate-100" />
+
+                <!-- Actions -->
+                <div class="flex items-center justify-between pt-1">
+                    <a href="/Admin/Users"
+                       class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border border-slate-200 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-colors">
+                        <i data-lucide="arrow-left" class="w-4 h-4"></i>
+                        Quay lại
+                    </a>
+                    <button type="submit"
+                            class="inline-flex items-center gap-2 px-6 py-2.5 bg-fpt-orange hover:bg-orange-500 text-white font-bold rounded-xl text-sm transition-all hover:shadow-lg">
+                        <i data-lucide="save" class="w-4 h-4"></i>
+                        Lưu thay đổi
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+}
+
+@section Scripts {
+<script>
+    // Toggle password section
+    const toggleBtn = document.getElementById('togglePwdSection');
+    const pwdSection = document.getElementById('pwdSection');
+    const chevron = document.getElementById('pwdChevron');
+    toggleBtn?.addEventListener('click', function () {
+        pwdSection.classList.toggle('hidden');
+        chevron.style.transform = pwdSection.classList.contains('hidden') ? '' : 'rotate(180deg)';
+    });
+
+    // Toggle password visibility
+    function togglePwd(inputId, btn) {
+        const input = document.getElementById(inputId);
+        const isPass = input.type === 'password';
+        input.type = isPass ? 'text' : 'password';
+        btn.innerHTML = isPass
+            ? '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>'
+            : '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
+    }
+
+    // Auto preview avatar URL
+    const avatarInput = document.querySelector('input[name="Input.AvatarUrl"]');
+    avatarInput?.addEventListener('blur', function () {
+        const val = this.value.trim();
+        const existing = document.getElementById('avatarPreview');
+        if (existing) existing.remove();
+        if (val) {
+            const img = document.createElement('img');
+            img.id = 'avatarPreview';
+            img.src = val;
+            img.className = 'mt-2 w-16 h-16 rounded-full object-cover ring-2 ring-fpt-orange/30';
+            img.onerror = () => img.remove();
+            this.parentNode.appendChild(img);
+        }
+    });
+</script>
+}

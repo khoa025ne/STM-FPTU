@@ -1,0 +1,332 @@
+@page
+@model FPT_SM.Web.Pages.Teacher.Attendance.IndexModel
+@{
+    Layout = "_TeacherLayout";
+    ViewData["Title"] = "Điểm danh";
+    var sheet = Model.AttendanceSheet;
+    var alertMap = Model.Alerts.ToDictionary(a => a.StudentId, a => a);
+}
+
+@if (TempData["Success"] != null)
+{
+    <div id="toast-success" class="fixed top-5 right-5 z-50 bg-teal-600 text-white px-5 py-3 rounded-xl shadow-lg flex items-center gap-3">
+        <i data-lucide="check-circle" class="w-5 h-5"></i>
+        <span>@TempData["Success"]</span>
+    </div>
+}
+@if (TempData["Error"] != null)
+{
+    <div id="toast-error" class="fixed top-5 right-5 z-50 bg-red-500 text-white px-5 py-3 rounded-xl shadow-lg flex items-center gap-3">
+        <i data-lucide="x-circle" class="w-5 h-5"></i>
+        <span>@TempData["Error"]</span>
+    </div>
+}
+
+<div class="flex gap-6" style="height: calc(100vh - 120px);">
+
+    <!-- ===== Left Panel: Class List ===== -->
+    <div class="w-72 flex-shrink-0 bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden flex flex-col" data-aos="fade-right">
+        <div class="px-5 py-4 border-b border-slate-100 bg-gradient-to-r from-fpt-navy to-blue-800">
+            <div class="flex items-center gap-2">
+                <i data-lucide="clipboard-check" class="w-5 h-5 text-white/80"></i>
+                <h3 class="font-bold text-white">Danh sách lớp</h3>
+            </div>
+            <p class="text-white/60 text-xs mt-1">Chọn lớp để điểm danh</p>
+        </div>
+
+        <div class="overflow-y-auto flex-1">
+            @if (Model.MyClasses.Any())
+            {
+                @foreach (var cls in Model.MyClasses)
+                {
+                    var isSelected = Model.SelectedClassId == cls.Id;
+                    <a href="?classId=@cls.Id&selectedDate=@DateTime.Today.ToString("yyyy-MM-dd")"
+                       class="flex items-start gap-3 px-4 py-4 border-b border-slate-50 hover:bg-slate-50 transition-colors cursor-pointer
+                              @(isSelected ? "bg-fpt-navy/5 border-l-4 border-l-fpt-orange" : "border-l-4 border-l-transparent")">
+                        <div class="w-9 h-9 rounded-xl @(isSelected ? "bg-fpt-navy" : "bg-slate-100") flex items-center justify-center flex-shrink-0 mt-0.5 transition-colors">
+                            <i data-lucide="users" class="w-4 h-4 @(isSelected ? "text-white" : "text-slate-500")"></i>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p class="font-semibold @(isSelected ? "text-fpt-navy" : "text-slate-700") text-sm truncate">@cls.Name</p>
+                            <p class="text-xs text-slate-400 truncate mt-0.5">@cls.SubjectName</p>
+                            <div class="flex items-center gap-2 mt-1.5">
+                                <span class="text-xs font-medium @(isSelected ? "text-fpt-orange" : "text-slate-400")">@cls.DayName</span>
+                                <span class="text-slate-200">•</span>
+                                <span class="text-xs text-slate-400">@cls.Enrolled SV</span>
+                            </div>
+                        </div>
+                    </a>
+                }
+            }
+            else
+            {
+                <div class="flex flex-col items-center justify-center py-16 text-center px-4">
+                    <i data-lucide="inbox" class="w-10 h-10 text-slate-300 mb-3"></i>
+                    <p class="text-slate-500 text-sm font-medium">Chưa có lớp nào</p>
+                    <p class="text-slate-400 text-xs mt-1">Bạn chưa được phân công lớp nào</p>
+                </div>
+            }
+        </div>
+    </div>
+
+    <!-- ===== Right Panel: Attendance Sheet ===== -->
+    <div class="flex-1 min-w-0 overflow-y-auto" data-aos="fade-up">
+
+        @if (Model.SelectedClassId.HasValue && sheet != null)
+        {
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+
+                <!-- Header -->
+                <div class="px-6 py-5 bg-gradient-to-r from-fpt-navy to-blue-800">
+                    <div class="flex items-start justify-between flex-wrap gap-4">
+                        <div>
+                            <h2 class="text-white font-bold text-xl">@sheet.ClassName</h2>
+                            <p class="text-white/70 text-sm mt-1">
+                                <span class="bg-white/10 px-2 py-0.5 rounded">@sheet.SubjectName</span>
+                                &nbsp;·&nbsp; Buổi <strong class="text-fpt-orange">@sheet.SessionNumber</strong> / 20
+                                &nbsp;·&nbsp; @sheet.Date.ToString("dddd, dd/MM/yyyy")
+                            </p>
+                        </div>
+                        <!-- Date picker -->
+                        <form method="get" class="flex items-center gap-2">
+                            <input type="hidden" name="classId" value="@Model.SelectedClassId" />
+                            <label class="text-white/70 text-sm font-medium">Chọn ngày:</label>
+                            <input type="date" name="selectedDate"
+                                   value="@(string.IsNullOrEmpty(Model.SelectedDate) ? DateTime.Today.ToString("yyyy-MM-dd") : Model.SelectedDate)"
+                                   class="text-sm bg-white/10 text-white border border-white/20 rounded-xl px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-white/40"
+                                   onchange="this.form.submit()" />
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Stats Bar -->
+                <div class="px-6 py-3 bg-slate-50 border-b border-slate-100 flex items-center gap-6 flex-wrap">
+                    <div class="flex items-center gap-2 text-teal-600">
+                        <span class="w-2.5 h-2.5 rounded-full bg-teal-500 inline-block"></span>
+                        <span class="text-sm font-medium">Có mặt: <strong id="stat-present">@sheet.Attendances.Count(a => a.Status == "Present")</strong></span>
+                    </div>
+                    <div class="flex items-center gap-2 text-red-500">
+                        <span class="w-2.5 h-2.5 rounded-full bg-red-500 inline-block"></span>
+                        <span class="text-sm font-medium">Vắng: <strong id="stat-absent">@sheet.Attendances.Count(a => a.Status == "Absent")</strong></span>
+                    </div>
+                    <div class="flex items-center gap-2 text-amber-600">
+                        <span class="w-2.5 h-2.5 rounded-full bg-amber-400 inline-block"></span>
+                        <span class="text-sm font-medium">Đi trễ: <strong id="stat-late">@sheet.Attendances.Count(a => a.Status == "Late")</strong></span>
+                    </div>
+                    <span class="text-slate-400 text-sm ml-auto">Tổng: @sheet.Attendances.Count sinh viên</span>
+                </div>
+
+                <!-- Attendance Form -->
+                <form method="post" asp-page-handler="SaveAttendance" id="attendance-form" onsubmit="return validateAttendance()">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="Dto.ClassId" value="@sheet.ClassId" />
+                    <input type="hidden" name="Dto.Date" value="@(sheet.Date.Kind == DateTimeKind.Utc ? sheet.Date : sheet.Date.ToUniversalTime()).ToString("O")" />
+                    <input type="hidden" name="Dto.SessionNumber" value="@sheet.SessionNumber" />
+
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead>
+                                <tr class="bg-slate-50 text-left">
+                                    <th class="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider w-12">STT</th>
+                                    <th class="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Mã SV</th>
+                                    <th class="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Họ tên</th>
+                                    <th class="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Trạng thái</th>
+                                    <th class="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider w-32">Số buổi vắng</th>
+                                    <th class="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Ghi chú</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-50">
+                                @for (int i = 0; i < sheet.Attendances.Count; i++)
+                                {
+                                    var item = sheet.Attendances[i];
+                                    alertMap.TryGetValue(item.StudentId, out var alert);
+                                    var absentCount = alert?.AbsentCount ?? 0;
+                                    var isFailed = absentCount >= 5;
+                                    var isWarning = absentCount >= 4 && absentCount < 5;
+
+                                    <tr class="hover:bg-slate-50/70 transition-colors @(isFailed ? "bg-red-50/30" : isWarning ? "bg-amber-50/30" : "")">
+                                        <td class="px-4 py-3.5 text-slate-400 text-sm">@(i + 1)</td>
+                                        <td class="px-4 py-3.5">
+                                            <span class="font-mono text-xs bg-slate-100 px-2 py-1 rounded-lg text-slate-600">
+                                                @(item.StudentRollNumber ?? "—")
+                                            </span>
+                                        </td>
+                                        <td class="px-4 py-3.5 font-semibold text-slate-700">@item.StudentName</td>
+                                        <td class="px-4 py-3.5">
+                                            <input type="hidden" name="Dto.Items[@i].EnrollmentId" value="@item.EnrollmentId" />
+                                            <input type="hidden" name="Dto.Items[@i].StudentId" value="@item.StudentId" />
+                                            <div class="flex gap-2 flex-wrap">
+                                                <label class="status-label flex items-center gap-1.5 cursor-pointer px-3 py-1.5 rounded-xl border-2 transition-all
+                                                              @(item.Status == "Present" ? "border-teal-500 bg-teal-50" : "border-slate-200 bg-white hover:border-teal-300")">
+                                                    <input type="radio" name="Dto.Items[@i].Status" value="Present"
+                                                           @(item.Status == "Present" ? "checked" : "")
+                                                           class="sr-only" onchange="onStatusChange(this)" />
+                                                    <span class="w-2 h-2 rounded-full bg-teal-500 flex-shrink-0"></span>
+                                                    <span class="text-xs font-semibold text-teal-700">Có mặt</span>
+                                                </label>
+                                                <label class="status-label flex items-center gap-1.5 cursor-pointer px-3 py-1.5 rounded-xl border-2 transition-all
+                                                              @(item.Status == "Absent" ? "border-red-500 bg-red-50" : "border-slate-200 bg-white hover:border-red-300")">
+                                                    <input type="radio" name="Dto.Items[@i].Status" value="Absent"
+                                                           @(item.Status == "Absent" ? "checked" : "")
+                                                           class="sr-only" onchange="onStatusChange(this)" />
+                                                    <span class="w-2 h-2 rounded-full bg-red-500 flex-shrink-0"></span>
+                                                    <span class="text-xs font-semibold text-red-600">Vắng</span>
+                                                </label>
+                                                <label class="status-label flex items-center gap-1.5 cursor-pointer px-3 py-1.5 rounded-xl border-2 transition-all
+                                                              @(item.Status == "Late" ? "border-amber-500 bg-amber-50" : "border-slate-200 bg-white hover:border-amber-300")">
+                                                    <input type="radio" name="Dto.Items[@i].Status" value="Late"
+                                                           @(item.Status == "Late" ? "checked" : "")
+                                                           class="sr-only" onchange="onStatusChange(this)" />
+                                                    <span class="w-2 h-2 rounded-full bg-amber-400 flex-shrink-0"></span>
+                                                    <span class="text-xs font-semibold text-amber-600">Đi trễ</span>
+                                                </label>
+                                            </div>
+                                        </td>
+                                        <td class="px-4 py-3.5 text-center">
+                                            @if (isFailed)
+                                            {
+                                                <span class="inline-flex items-center gap-1 text-xs font-bold text-red-600 bg-red-100 px-2.5 py-1 rounded-full">
+                                                    <i data-lucide="x-circle" class="w-3.5 h-3.5"></i>
+                                                    @absentCount buổi - Rớt
+                                                </span>
+                                            }
+                                            else if (isWarning)
+                                            {
+                                                <span class="inline-flex items-center gap-1 text-xs font-bold text-amber-600 bg-amber-100 px-2.5 py-1 rounded-full">
+                                                    <i data-lucide="alert-triangle" class="w-3.5 h-3.5"></i>
+                                                    @absentCount buổi - Cảnh báo
+                                                </span>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-sm text-slate-500 font-medium">@absentCount</span>
+                                            }
+                                        </td>
+                                        <td class="px-4 py-3.5">
+                                            <input type="text" name="Dto.Items[@i].Note" value="@item.Note"
+                                                   placeholder="Ghi chú..."
+                                                   class="text-xs border border-slate-200 rounded-xl px-3 py-1.5 w-full max-w-[200px] focus:outline-none focus:ring-2 focus:ring-fpt-navy/20 focus:border-fpt-navy/40 transition-all" />
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Footer Action Bar -->
+                    <div class="px-6 py-4 border-t border-slate-100 bg-slate-50/50 flex items-center justify-between">
+                        <div class="flex items-center gap-4 text-sm text-slate-500">
+                            <span>Buổi <strong class="text-fpt-navy">@sheet.SessionNumber</strong> / 20</span>
+                            <span>•</span>
+                            <span>Ngày: <strong class="text-slate-700">@sheet.Date.ToString("dd/MM/yyyy")</strong></span>
+                        </div>
+                        <button type="submit"
+                                class="flex items-center gap-2 bg-fpt-navy hover:bg-blue-900 active:scale-95 text-white font-semibold px-6 py-2.5 rounded-xl transition-all shadow-sm">
+                            <i data-lucide="save" class="w-4 h-4"></i>
+                            Lưu điểm danh
+                        </button>
+                    </div>
+                </form>
+            </div>
+        }
+        else if (Model.SelectedClassId.HasValue)
+        {
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center justify-center py-24 text-center">
+                <div class="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
+                    <i data-lucide="calendar-x" class="w-8 h-8 text-slate-400"></i>
+                </div>
+                <p class="text-slate-600 font-semibold">Không có dữ liệu điểm danh</p>
+                <p class="text-slate-400 text-sm mt-1">Lớp chưa có sinh viên hoặc chưa hoạt động</p>
+            </div>
+        }
+        else
+        {
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center justify-center py-32 text-center">
+                <div class="w-24 h-24 bg-fpt-navy/5 rounded-full flex items-center justify-center mb-6">
+                    <i data-lucide="clipboard-check" class="w-12 h-12 text-fpt-navy/25"></i>
+                </div>
+                <h3 class="text-slate-600 font-bold text-xl">Chọn lớp để điểm danh</h3>
+                <p class="text-slate-400 text-sm mt-2 max-w-sm">Chọn một lớp học từ danh sách bên trái để xem và ghi nhận điểm danh cho sinh viên</p>
+            </div>
+        }
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    // Auto-hide toasts
+    setTimeout(() => {
+        document.getElementById('toast-success')?.remove();
+        document.getElementById('toast-error')?.remove();
+    }, 4000);
+
+    // Validate attendance form before submission
+    function validateAttendance() {
+        const form = document.getElementById('attendance-form');
+        if (!form) return false;
+        
+        const radioInputs = form.querySelectorAll('input[type=radio][name*=".Status"]');
+        if (radioInputs.length === 0) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Lỗi',
+                text: 'Không thể lấy dữ liệu sinh viên. Vui lòng tải lại trang.',
+                confirmButtonColor: '#FF6B35'
+            });
+            return false;
+        }
+        return true;
+    }
+
+    // Status radio: update visual state on change
+    function onStatusChange(radio) {
+        const container = radio.closest('td');
+        container.querySelectorAll('.status-label').forEach(lbl => {
+            const r = lbl.querySelector('input[type=radio]');
+            // Reset styles
+            lbl.classList.remove(
+                'border-teal-500','bg-teal-50',
+                'border-red-500','bg-red-50',
+                'border-amber-500','bg-amber-50'
+            );
+            lbl.classList.add('border-slate-200','bg-white');
+        });
+        const selected = radio.closest('.status-label');
+        selected.classList.remove('border-slate-200','bg-white');
+        const val = radio.value;
+        if (val === 'Present')      selected.classList.add('border-teal-500','bg-teal-50');
+        else if (val === 'Absent')  selected.classList.add('border-red-500','bg-red-50');
+        else if (val === 'Late')    selected.classList.add('border-amber-500','bg-amber-50');
+        updateStats();
+    }
+
+    function updateStats() {
+        let present = 0, absent = 0, late = 0;
+        document.querySelectorAll('input[type=radio]:checked').forEach(r => {
+            if (r.value === 'Present') present++;
+            else if (r.value === 'Absent') absent++;
+            else if (r.value === 'Late') late++;
+        });
+        document.getElementById('stat-present').textContent = present;
+        document.getElementById('stat-absent').textContent = absent;
+        document.getElementById('stat-late').textContent = late;
+    }
+
+    // SignalR: join class group to receive real-time updates
+    (async function() {
+        try {
+            const classId = @(Model.SelectedClassId ?? 0);
+            if (!classId) return;
+            const conn = signalRManager.get('attendance');
+            if (conn) {
+                await conn.invoke('JoinGroup', `class_${classId}`);
+                conn.on('AttendanceUpdated', data => {
+                    if (data.classId === classId) {
+                        showToast('Điểm danh lớp này vừa được cập nhật!', 'info');
+                    }
+                });
+            }
+        } catch(e) { console.warn('SignalR attendance error:', e); }
+    })();
+</script>
+}

@@ -1,0 +1,117 @@
+@page
+@model FPT_SM.Web.Pages.Manager.Reports.IndexModel
+@using System.Text.Json
+@{
+    Layout = "_ManagerLayout";
+    var statusLabels = Model.ClassStatuses.Select(s => s.StatusLabel).ToList();
+    var statusValues = Model.ClassStatuses.Select(s => s.Count).ToList();
+}
+
+<div class="space-y-6">
+    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 flex flex-col lg:flex-row justify-between gap-4">
+        <div>
+            <h1 class="text-xl font-bold text-slate-800">Báo cáo quản lý</h1>
+            <p class="text-sm text-slate-500">Tổng hợp trạng thái lớp học và công việc của giáo viên.</p>
+        </div>
+        <form method="get" class="flex gap-3 items-end">
+            <label class="text-xs text-slate-500">
+                Học kỳ
+                <select asp-for="SemesterId" class="ml-2 rounded-lg border border-slate-200 px-3 py-2 text-sm">
+                    @foreach (var semester in Model.Semesters)
+                    {
+                        <option value="@semester.Id">@semester.Name</option>
+                    }
+                </select>
+            </label>
+            <button type="submit" class="px-4 py-2 rounded-xl bg-fpt-navy text-white text-sm font-semibold">Áp dụng</button>
+        </form>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="bg-white border border-slate-100 rounded-2xl shadow-sm p-6 space-y-2">
+            <p class="text-xs text-slate-400">Tỉ lệ phê duyệt lớp</p>
+            <div class="w-full bg-slate-100 rounded-full h-2.5">
+                <div class="h-2.5 rounded-full bg-fpt-orange" style="width:@Model.ApprovalRate%"></div>
+            </div>
+            <p class="text-slate-600 text-sm">@Model.ApprovalRate.ToString("F1")% lớp đã được duyệt</p>
+        </div>
+        <div class="bg-white border border-slate-100 rounded-2xl shadow-sm p-6">
+            <p class="text-xs text-slate-400">Tình hình lớp học</p>
+            <canvas id="statusChart" height="170"></canvas>
+        </div>
+        <div class="bg-white border border-slate-100 rounded-2xl shadow-sm p-6">
+            <p class="text-xs text-slate-400">Xuất danh sách lớp</p>
+            <form method="post" asp-page-handler="ExportClasses">
+                <button type="submit" class="w-full px-4 py-2 rounded-xl bg-fpt-orange text-white text-sm font-semibold">Tải Excel</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="bg-white border border-slate-100 rounded-2xl shadow-sm p-6">
+            <h2 class="text-lg font-bold text-slate-800 mb-3">Giáo viên - số lớp phụ trách</h2>
+            <div class="space-y-3">
+                @foreach (var teacher in Model.TeacherReports.Take(5))
+                {
+                    <div class="flex items-center justify-between border-b border-slate-100 pb-3 last:border-0 last:pb-0">
+                        <div>
+                            <p class="text-sm font-semibold text-slate-800">@teacher.TeacherName</p>
+                            <p class="text-xs text-slate-400">ID: @teacher.TeacherId</p>
+                        </div>
+                        <span class="text-sm font-bold text-fpt-navy">@teacher.ClassCount lớp</span>
+                    </div>
+                }
+            </div>
+        </div>
+        <div class="bg-white border border-slate-100 rounded-2xl shadow-sm p-6 overflow-x-auto">
+            <h2 class="text-lg font-bold text-slate-800 mb-4">Danh sách lớp</h2>
+            <table class="w-full text-sm text-left text-slate-600">
+                <thead class="text-xs uppercase tracking-wide text-slate-400">
+                    <tr>
+                        <th class="py-2 pr-3">Lớp</th>
+                        <th class="py-2 pr-3">Môn</th>
+                        <th class="py-2 pr-3">GV</th>
+                        <th class="py-2 pr-3">Trạng thái</th>
+                        <th class="py-2 pr-3">Đăng ký</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    @foreach (var cls in Model.ClassList.Take(10))
+                    {
+                        <tr>
+                            <td class="py-2 pr-3">@cls.ClassName</td>
+                            <td class="py-2 pr-3">@cls.SubjectName</td>
+                            <td class="py-2 pr-3">@cls.TeacherName</td>
+                            <td class="py-2 pr-3">@cls.StatusLabel</td>
+                            <td class="py-2 pr-3">@cls.Enrolled / @cls.Capacity</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    const ctx = document.getElementById('statusChart');
+    new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: @Html.Raw(JsonSerializer.Serialize(statusLabels)),
+            datasets: [{
+                data: @Html.Raw(JsonSerializer.Serialize(statusValues)),
+                backgroundColor: ['#0EA5E9', '#14B8A6', '#F97316', '#EF4444'],
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+</script>
+}

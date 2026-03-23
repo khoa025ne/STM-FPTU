@@ -1,0 +1,168 @@
+@page
+@model FPT_SM.Web.Pages.Admin.Subjects.CreateModel
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Tạo môn học";
+}
+
+<!-- Breadcrumb -->
+<nav class="flex items-center gap-2 text-sm text-slate-400 mb-6" data-aos="fade-down">
+    <a href="/Admin/Subjects" class="hover:text-fpt-navy transition-colors">Quản lý Môn học</a>
+    <i data-lucide="chevron-right" class="w-4 h-4"></i>
+    <span class="text-slate-600 font-medium">Tạo môn học</span>
+</nav>
+
+<div class="max-w-2xl mx-auto" data-aos="fade-up">
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+        <!-- Card Header -->
+        <div class="bg-gradient-to-r from-fpt-navy to-blue-800 px-6 py-5">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
+                    <i data-lucide="book-open" class="w-5 h-5 text-white"></i>
+                </div>
+                <div>
+                    <h2 class="text-white font-bold text-lg">Tạo môn học</h2>
+                    <p class="text-white/60 text-sm">Điền đầy đủ thông tin bên dưới</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Form -->
+        <form method="post" class="p-6 space-y-5">
+            @Html.AntiForgeryToken()
+
+            <!-- Validation Summary -->
+            @if (!ViewData.ModelState.IsValid)
+            {
+                <div class="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3">
+                    <i data-lucide="alert-circle" class="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5"></i>
+                    <div>
+                        <p class="text-sm font-semibold text-red-700 mb-1">Vui lòng kiểm tra lại thông tin:</p>
+                        <ul class="text-sm text-red-600 space-y-0.5">
+                            @foreach (var error in ViewData.ModelState.Values.SelectMany(v => v.Errors))
+                            {
+                                <li>• @error.ErrorMessage</li>
+                            }
+                        </ul>
+                    </div>
+                </div>
+            }
+
+            <!-- Mã môn học -->
+            <div>
+                <label class="block text-sm font-semibold text-slate-700 mb-1.5">
+                    Mã môn học <span class="text-red-500">*</span>
+                </label>
+                <input asp-for="CreateDto.Code" type="text" placeholder="Ví dụ: PRF192"
+                       class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-fpt-navy/20 focus:border-fpt-navy/40 text-sm transition-all font-mono uppercase" />
+                <span asp-validation-for="CreateDto.Code" class="text-xs text-red-500 mt-1 block"></span>
+            </div>
+
+            <!-- Tên môn học -->
+            <div>
+                <label class="block text-sm font-semibold text-slate-700 mb-1.5">
+                    Tên môn học <span class="text-red-500">*</span>
+                </label>
+                <input asp-for="CreateDto.Name" type="text" placeholder="Ví dụ: Lập trình căn bản"
+                       class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-fpt-navy/20 focus:border-fpt-navy/40 text-sm transition-all" />
+                <span asp-validation-for="CreateDto.Name" class="text-xs text-red-500 mt-1 block"></span>
+            </div>
+
+            <!-- Tín chỉ + Học phí -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-1.5">
+                        Tín chỉ <span class="text-red-500">*</span>
+                    </label>
+                    <select asp-for="CreateDto.Credits"
+                            class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-fpt-navy/20 focus:border-fpt-navy/40 text-sm transition-all bg-white">
+                        @for (int i = 1; i <= 5; i++)
+                        {
+                            @if (i == 3)
+                            {
+                                <option value="@i" selected>@i tín chỉ</option>
+                            }
+                            else
+                            {
+                                <option value="@i">@i tín chỉ</option>
+                            }
+                        }
+                    </select>
+                    <span asp-validation-for="CreateDto.Credits" class="text-xs text-red-500 mt-1 block"></span>
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-1.5">
+                        Học phí (VNĐ) <span class="text-red-500">*</span>
+                    </label>
+                    <input asp-for="CreateDto.Price" type="number" placeholder="Ví dụ: 6000000" value="6000000" min="0" step="100000"
+                           class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-fpt-navy/20 focus:border-fpt-navy/40 text-sm transition-all" />
+                    <span asp-validation-for="CreateDto.Price" class="text-xs text-red-500 mt-1 block"></span>
+                </div>
+            </div>
+
+            <!-- Mô tả -->
+            <div>
+                <label class="block text-sm font-semibold text-slate-700 mb-1.5">
+                    Mô tả
+                </label>
+                <textarea asp-for="CreateDto.Description" rows="3" placeholder="Mô tả ngắn về môn học..."
+                          class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-fpt-navy/20 focus:border-fpt-navy/40 text-sm transition-all resize-none"></textarea>
+                <span asp-validation-for="CreateDto.Description" class="text-xs text-red-500 mt-1 block"></span>
+            </div>
+
+            <!-- Môn tiên quyết -->
+            <div>
+                <label class="block text-sm font-semibold text-slate-700 mb-1.5">
+                    Môn tiên quyết
+                </label>
+                <div class="border border-slate-200 rounded-xl p-3 max-h-48 overflow-y-auto space-y-1.5">
+                    @if (Model.AllSubjects.Any())
+                    {
+                        @foreach (var subject in Model.AllSubjects)
+                        {
+                            <label class="flex items-center gap-2 cursor-pointer hover:bg-slate-50 rounded-lg px-2 py-1">
+                                <input type="checkbox" name="CreateDto.PrerequisiteSubjectIds" value="@subject.Id"
+                                       class="rounded text-fpt-navy prerequisite-checkbox" />
+                                <span class="text-xs font-mono text-fpt-navy">@subject.Code</span>
+                                <span class="text-sm text-slate-700">@subject.Name</span>
+                            </label>
+                        }
+                    }
+                    else
+                    {
+                        <p class="text-xs text-slate-400 text-center py-2">Chưa có môn học nào</p>
+                    }
+                </div>
+            </div>
+
+            <!-- Hidden input to store selected prerequisite IDs -->
+            <input type="hidden" id="prerequisiteIds" name="prerequisiteIds" value="" />
+
+            <!-- Divider -->
+            <hr class="border-slate-100" />
+
+            <!-- Actions -->
+            <div class="flex items-center justify-between pt-1">
+                <a href="/Admin/Subjects"
+                   class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border border-slate-200 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-colors">
+                    <i data-lucide="arrow-left" class="w-4 h-4"></i>
+                    Hủy bỏ
+                </a>
+                <button type="submit"
+                        class="inline-flex items-center gap-2 px-6 py-2.5 bg-fpt-orange hover:bg-orange-500 text-white font-bold rounded-xl text-sm transition-all hover:shadow-lg">
+                    <i data-lucide="save" class="w-4 h-4"></i>
+                    Tạo môn học
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    // Collect prerequisite subject IDs before form submission
+    document.querySelector('form').addEventListener('submit', function(e) {
+        const checkedBoxes = document.querySelectorAll('.prerequisite-checkbox:checked');
+        const ids = Array.from(checkedBoxes).map(cb => cb.value).join(',');
+        document.getElementById('prerequisiteIds').value = ids;
+    });
+</script>

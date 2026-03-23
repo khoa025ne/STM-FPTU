@@ -1,0 +1,240 @@
+@page
+@model FPT_SM.Web.Pages.Teacher.Classes.IndexModel
+@{
+    Layout = "_TeacherLayout";
+    ViewData["Title"] = "Danh sách lớp dạy";
+}
+
+<!-- Page Header -->
+<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6" data-aos="fade-down">
+    <div>
+        <h2 class="text-2xl font-black text-fpt-navy">Danh sách lớp dạy</h2>
+        <p class="text-slate-500 text-sm mt-1">Quản lý các lớp học mà bạn đang giảng dạy</p>
+    </div>
+</div>
+
+<!-- Stats -->
+<div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-5" data-aos="fade-up" data-aos-delay="50">
+    <div class="bg-gradient-to-br from-fpt-navy to-blue-800 rounded-xl p-4 text-white">
+        <p class="text-xs text-blue-200 mb-1">Tổng lớp dạy</p>
+        <p class="text-3xl font-black">@Model.MyClasses.Count</p>
+    </div>
+    <div class="bg-gradient-to-br from-teal-400 to-teal-600 rounded-xl p-4 text-white">
+        <p class="text-xs text-teal-100 mb-1">Đang học</p>
+        <p class="text-3xl font-black">@Model.MyClasses.Count(c => c.Status == 2 || c.Status == 3)</p>
+    </div>
+    <div class="bg-gradient-to-br from-fpt-orange to-orange-600 rounded-xl p-4 text-white">
+        <p class="text-xs text-orange-100 mb-1">Tổng sinh viên</p>
+        <p class="text-3xl font-black">@Model.MyClasses.Sum(c => c.Enrolled)</p>
+    </div>
+</div>
+
+<!-- Table -->
+<div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden" data-aos="fade-up" data-aos-delay="100">
+    <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+        <h3 class="font-bold text-slate-800">Danh sách lớp</h3>
+        <span class="text-sm text-slate-400">@Model.MyClasses.Count lớp</span>
+    </div>
+
+    <!-- Skeleton -->
+    <div id="skeletonRows" class="hidden">
+        @for (int i = 0; i < 5; i++)
+        {
+            <div class="flex items-center gap-4 px-6 py-4 border-b border-slate-50 animate-pulse">
+                <div class="h-4 bg-slate-200 rounded w-24"></div>
+                <div class="h-4 bg-slate-200 rounded flex-1"></div>
+                <div class="h-4 bg-slate-200 rounded w-28"></div>
+                <div class="h-8 bg-slate-200 rounded-full w-20"></div>
+                <div class="flex gap-2 ml-auto">
+                    <div class="h-8 bg-slate-200 rounded-lg w-16"></div>
+                    <div class="h-8 bg-slate-200 rounded-lg w-16"></div>
+                </div>
+            </div>
+        }
+    </div>
+
+    <div class="overflow-x-auto">
+        @if (!Model.MyClasses.Any())
+        {
+            <div class="text-center py-16 text-slate-400">
+                <i data-lucide="inbox" class="w-12 h-12 mx-auto mb-3 opacity-30"></i>
+                <p class="font-medium">Chưa có lớp nào được phân công</p>
+                <p class="text-sm mt-1">Bạn sẽ thấy các lớp dạy của mình tại đây</p>
+            </div>
+        }
+        else
+        {
+            <table class="w-full text-sm">
+                <thead class="bg-slate-50 text-slate-500 text-xs font-semibold uppercase tracking-wider">
+                    <tr>
+                        <th class="px-4 py-3.5 text-left">Mã lớp</th>
+                        <th class="px-4 py-3.5 text-left">Môn học</th>
+                        <th class="px-4 py-3.5 text-left">Kỳ học</th>
+                        <th class="px-4 py-3.5 text-left">Lịch học</th>
+                        <th class="px-4 py-3.5 text-center">Sĩ số</th>
+                        <th class="px-4 py-3.5 text-left">Trạng thái</th>
+                        <th class="px-4 py-3.5 text-right">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-50">
+                    @foreach (var cls in Model.MyClasses.OrderByDescending(c => c.SemesterId).ThenBy(c => c.Name))
+                    {
+                        var badgeClass = cls.Status switch
+                        {
+                            0 => "bg-red-100 text-red-700",      // Cancelled
+                            1 => "bg-sky-100 text-sky-700",      // Open
+                            2 => "bg-teal-100 text-teal-700",    // Approved (Ongoing if Semester is Ongoing)
+                            3 => "bg-amber-100 text-amber-700",  // Ongoing
+                            4 => "bg-slate-100 text-slate-600",  // Ended
+                            _ => "bg-gray-100 text-gray-600"
+                        };
+
+                        var statusText = cls.Status switch
+                        {
+                            0 => "Đã hủy",
+                            1 => "Chờ duyệt",
+                            2 => "Đã duyệt",
+                            3 => "Đang học",
+                            4 => "Kết thúc",
+                            _ => "Không xác định"
+                        };
+
+                        var dotColor = cls.Status switch
+                        {
+                            0 => "bg-red-500",
+                            1 => "bg-sky-500",
+                            2 => "bg-teal-500",
+                            3 => "bg-amber-500",
+                            4 => "bg-slate-400",
+                            _ => "bg-gray-400"
+                        };
+
+                        <tr class="hover:bg-slate-50 transition-colors">
+                            <td class="px-4 py-3 text-slate-900 font-semibold">@cls.Name</td>
+                            <td class="px-4 py-3 text-slate-700">@cls.SubjectCode - @cls.SubjectName</td>
+                            <td class="px-4 py-3 text-slate-600">@cls.SemesterName</td>
+                            <td class="px-4 py-3 text-slate-600">
+                                <div class="text-sm">
+                                    <span class="font-medium">@cls.DayName</span>
+                                    <span class="text-slate-400 mx-1">•</span>
+                                    <span class="text-slate-500">@cls.SlotTime</span>
+                                </div>
+                            </td>
+                            <td class="px-4 py-3 text-center">
+                                <div class="text-slate-900 font-semibold">@cls.Enrolled/@cls.Capacity</div>
+                                <div class="text-xs text-slate-400 mt-0.5">
+                                    @{
+                                        var pct = cls.Capacity > 0 ? Math.Round((double)cls.Enrolled / cls.Capacity * 100) : 0;
+                                        <span>@pct%</span>
+                                    }
+                                </div>
+                            </td>
+                            <td class="px-4 py-3">
+                                <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold @badgeClass">
+                                    <span class="w-1.5 h-1.5 rounded-full @dotColor"></span>
+                                    @statusText
+                                </span>
+                            </td>
+                            <td class="px-4 py-3 text-right">
+                                <div class="flex items-center justify-end gap-2">
+                                    @if (cls.Status == 2 || cls.Status == 3) // Approved or Ongoing
+                                    {
+                                        <a href="/Teacher/Attendance?classId=@cls.Id"
+                                           class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold bg-sky-100 text-sky-700 hover:bg-sky-200 transition-colors"
+                                           title="Điểm danh">
+                                            <i data-lucide="clipboard-list" class="w-3.5 h-3.5"></i>
+                                            Điểm danh
+                                        </a>
+                                        <a href="/Teacher/Grades?classId=@cls.Id"
+                                           class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold bg-teal-100 text-teal-700 hover:bg-teal-200 transition-colors"
+                                           title="Chấm điểm">
+                                            <i data-lucide="edit" class="w-3.5 h-3.5"></i>
+                                            Chấm điểm
+                                        </a>
+                                    }
+                                    <a href="/Teacher/Quizzes"
+                                       class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold bg-fpt-navy text-white hover:bg-blue-900 transition-colors"
+                                       title="Quiz">
+                                        <i data-lucide="help-circle" class="w-3.5 h-3.5"></i>
+                                        Quiz
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    // Show/hide skeleton while page loads
+    window.addEventListener('load', function() {
+        document.getElementById('skeletonRows')?.classList.add('hidden');
+    });
+
+    // Toast notifications for TempData
+    document.addEventListener('DOMContentLoaded', function() {
+        const successMsg = document.getElementById('tempSuccessMsg')?.innerText;
+        if (successMsg) {
+            showToast(successMsg, 'success');
+        }
+    });
+
+    function showToast(message, type = 'info') {
+        const icon = type === 'success' ? 'check-circle' : type === 'error' ? 'x-circle' : 'info';
+        const bgColor = type === 'success' ? 'bg-teal-600' : type === 'error' ? 'bg-red-500' : 'bg-blue-600';
+
+        const toast = document.createElement('div');
+        toast.className = `fixed top-5 right-5 z-50 ${bgColor} text-white px-5 py-3 rounded-xl shadow-lg flex items-center gap-3 animate-in fade-in slide-in-from-right-4 duration-300`;
+        toast.innerHTML = `
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+            </svg>
+            <span>${message}</span>
+        `;
+        document.body.appendChild(toast);
+
+        setTimeout(() => {
+            toast.remove();
+        }, 3000);
+    }
+
+    // SignalR - Listen for subject updates from Admin
+    (async function () {
+        try {
+            const conn = await signalRManager.connect('notification', '/hubs/notification');
+            await conn.invoke('JoinGroup', 'teacher_all');
+
+            conn.on('SubjectUpdated', async function (data) {
+                showToast(`Môn học cập nhật: ${data.name} (${data.action})`, 'info');
+                if (data.action === 'delete') {
+                    await new Promise(r => setTimeout(r, 1000));
+                    window.location.reload();
+                }
+            });
+
+            conn.on('ClassUpdated', async function (data) {
+                const actions = { create: 'Lớp mới', edit: 'Cập nhật lớp', delete: 'Lớp bị xóa' };
+                showToast(`${actions[data.action] || 'Thay đổi lớp'}: ${data.classCode}`, 'info');
+                await new Promise(r => setTimeout(r, 1000));
+                window.location.reload();
+            });
+
+            conn.on('EnrollmentChanged', async function (data) {
+                const icon = data.action === 'enroll' ? '✅' : '❌';
+                showToast(
+                    `${icon} Đăng ký học`,
+                    `${data.studentName} - ${data.className} (${data.enrolled}/${data.capacity})`,
+                    'info'
+                );
+                await new Promise(r => setTimeout(r, 1000));
+                window.location.reload();
+            });
+
+        } catch (e) { console.warn('SignalR not connected', e); }
+    })();
+</script>
+}

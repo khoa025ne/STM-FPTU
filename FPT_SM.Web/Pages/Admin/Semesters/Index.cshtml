@@ -1,0 +1,250 @@
+@page
+@model FPT_SM.Web.Pages.Admin.Semesters.IndexModel
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Quản lý Học kỳ";
+}
+
+<!-- Toast từ TempData -->
+@if (TempData["Success"] != null)
+{
+    <div id="tempSuccessMsg" class="hidden">@TempData["Success"]</div>
+}
+@if (TempData["Error"] != null)
+{
+    <div id="tempErrorMsg" class="hidden">@TempData["Error"]</div>
+}
+
+<!-- Page Header -->
+<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6" data-aos="fade-down">
+    <div>
+        <h2 class="text-2xl font-black text-fpt-navy">Quản lý Học kỳ</h2>
+        <p class="text-slate-500 text-sm mt-1">Quản lý các học kỳ trong hệ thống</p>
+    </div>
+    <a href="/Admin/Semesters/Create"
+       class="inline-flex items-center gap-2 bg-fpt-orange hover:bg-orange-500 text-white font-semibold px-5 py-2.5 rounded-xl text-sm transition-all hover:shadow-lg">
+        <i data-lucide="plus" class="w-4 h-4"></i>
+        Thêm học kỳ
+    </a>
+</div>
+
+<!-- Stat Cards -->
+<div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5" data-aos="fade-up" data-aos-delay="50">
+    <div class="bg-gradient-to-br from-fpt-navy to-blue-800 rounded-xl p-4 text-white">
+        <p class="text-xs text-blue-200 mb-1">Tổng học kỳ</p>
+        <p class="text-3xl font-black">@Model.Semesters.Count</p>
+    </div>
+    <div class="bg-gradient-to-br from-sky-400 to-sky-600 rounded-xl p-4 text-white">
+        <p class="text-xs text-sky-100 mb-1">Sắp diễn ra</p>
+        <p class="text-3xl font-black">@Model.Semesters.Count(s => s.Status == 1)</p>
+    </div>
+    <div class="bg-gradient-to-br from-teal-400 to-teal-600 rounded-xl p-4 text-white">
+        <p class="text-xs text-teal-100 mb-1">Đang diễn ra</p>
+        <p class="text-3xl font-black">@Model.Semesters.Count(s => s.Status == 2)</p>
+    </div>
+    <div class="bg-gradient-to-br from-slate-400 to-slate-600 rounded-xl p-4 text-white">
+        <p class="text-xs text-slate-200 mb-1">Đã kết thúc</p>
+        <p class="text-3xl font-black">@Model.Semesters.Count(s => s.Status == 3 || s.Status == 0)</p>
+    </div>
+</div>
+
+<!-- Table -->
+<div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden" data-aos="fade-up" data-aos-delay="100">
+    <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+        <h3 class="font-bold text-slate-800">Danh sách học kỳ</h3>
+        <span class="text-sm text-slate-400">@Model.Semesters.Count học kỳ</span>
+    </div>
+
+    <!-- Skeleton Loading -->
+    <div id="skeletonRows" class="hidden">
+        @for (int i = 0; i < 4; i++)
+        {
+            <div class="flex items-center gap-4 px-6 py-4 border-b border-slate-50 animate-pulse">
+                <div class="h-4 bg-slate-200 rounded w-32"></div>
+                <div class="h-4 bg-slate-200 rounded w-20"></div>
+                <div class="h-4 bg-slate-200 rounded w-24"></div>
+                <div class="h-4 bg-slate-200 rounded w-24"></div>
+                <div class="h-6 bg-slate-200 rounded-full w-20"></div>
+                <div class="flex gap-2 ml-auto">
+                    <div class="h-8 bg-slate-200 rounded-lg w-24"></div>
+                    <div class="h-8 bg-slate-200 rounded-lg w-16"></div>
+                </div>
+            </div>
+        }
+    </div>
+
+    <div class="overflow-x-auto">
+        @if (!Model.Semesters.Any())
+        {
+            <div class="text-center py-16 text-slate-400">
+                <i data-lucide="calendar" class="w-12 h-12 mx-auto mb-3 opacity-30"></i>
+                <p class="font-medium">Chưa có học kỳ nào</p>
+                <p class="text-sm mt-1">Nhấn "Thêm học kỳ" để tạo học kỳ đầu tiên</p>
+            </div>
+        }
+        else
+        {
+            <table class="w-full text-sm">
+                <thead class="bg-slate-50 text-slate-500 text-xs font-semibold uppercase tracking-wider">
+                    <tr>
+                        <th class="px-5 py-3.5 text-left">Tên học kỳ</th>
+                        <th class="px-5 py-3.5 text-left">Mã</th>
+                        <th class="px-5 py-3.5 text-left">Ngày bắt đầu</th>
+                        <th class="px-5 py-3.5 text-left">Ngày kết thúc</th>
+                        <th class="px-5 py-3.5 text-left">Số lớp</th>
+                        <th class="px-5 py-3.5 text-left">Trạng thái</th>
+                        <th class="px-5 py-3.5 text-right">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-50">
+                    @foreach (var sem in Model.Semesters)
+                    {
+                        var badgeClass = sem.Status switch {
+                            0 => "bg-red-100 text-red-700",
+                            1 => "bg-sky-100 text-sky-700",
+                            2 => "bg-teal-100 text-teal-700",
+                            3 => "bg-amber-100 text-amber-700",
+                            _ => "bg-gray-100 text-gray-600"
+                        };
+                        var dotClass = sem.Status switch {
+                            0 => "bg-red-500",
+                            1 => "bg-sky-500",
+                            2 => "bg-teal-500",
+                            3 => "bg-amber-500",
+                            _ => "bg-gray-400"
+                        };
+                        <tr class="hover:bg-slate-50 transition-colors">
+                            <td class="px-5 py-3.5 font-semibold text-slate-800">@sem.Name</td>
+                            <td class="px-5 py-3.5">
+                                <span class="text-xs font-mono bg-slate-100 text-slate-600 px-2 py-1 rounded">@sem.Code</span>
+                            </td>
+                            <td class="px-5 py-3.5 text-slate-500">@sem.StartDate.ToString("dd/MM/yyyy")</td>
+                            <td class="px-5 py-3.5 text-slate-500">@sem.EndDate.ToString("dd/MM/yyyy")</td>
+                            <td class="px-5 py-3.5 text-slate-600">@sem.ClassCount lớp</td>
+                            <td class="px-5 py-3.5">
+                                <span class="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full @badgeClass">
+                                    <span class="w-1.5 h-1.5 rounded-full @dotClass"></span>
+                                    @sem.StatusName
+                                </span>
+                            </td>
+                            <td class="px-5 py-3.5">
+                                <div class="flex items-center justify-end gap-1.5">
+                                    @if (sem.Status == 1)
+                                    {
+                                        <a href="/Admin/Semesters/Edit?id=@sem.Id"
+                                           class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold bg-sky-100 text-sky-700 hover:bg-sky-200 transition-colors">
+                                            <i data-lucide="edit-2" class="w-3 h-3"></i> Sửa
+                                        </a>
+                                    }
+                                    @if (sem.Status == 1)
+                                    {
+                                        <button type="button"
+                                                onclick="confirmAdvance(@sem.Id, '@sem.Name', 'Kích hoạt học kỳ', 'Bạn muốn kích hoạt học kỳ <b>@sem.Name</b>? Học kỳ sẽ chuyển sang trạng thái Đang diễn ra.', 'teal')"
+                                                class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold bg-teal-100 text-teal-700 hover:bg-teal-200 transition-colors">
+                                            <i data-lucide="play" class="w-3 h-3"></i> Kích hoạt
+                                        </button>
+                                    }
+                                    @if (sem.Status == 2)
+                                    {
+                                        <button type="button"
+                                                onclick="confirmAdvance(@sem.Id, '@sem.Name', 'Kết thúc học kỳ', 'Bạn muốn kết thúc học kỳ <b>@sem.Name</b>?', 'amber')"
+                                                class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold bg-amber-100 text-amber-700 hover:bg-amber-200 transition-colors">
+                                            <i data-lucide="square" class="w-3 h-3"></i> Kết thúc
+                                        </button>
+                                    }
+                                    @if (sem.Status == 3)
+                                    {
+                                        <button type="button"
+                                                onclick="confirmAdvance(@sem.Id, '@sem.Name', 'Đóng học kỳ', 'Bạn muốn đóng học kỳ <b>@sem.Name</b>? Học kỳ sẽ chuyển sang trạng thái Đã đóng.', 'slate')"
+                                                class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors">
+                                            <i data-lucide="archive" class="w-3 h-3"></i> Đóng
+                                        </button>
+                                    }
+                                    @if (sem.Status == 1 && sem.ClassCount == 0)
+                                    {
+                                        <button type="button"
+                                                onclick="confirmDelete(@sem.Id, '@sem.Name')"
+                                                class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold bg-red-100 text-red-600 hover:bg-red-200 transition-colors">
+                                            <i data-lucide="trash-2" class="w-3 h-3"></i> Xóa
+                                        </button>
+                                    }
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+</div>
+
+<!-- Hidden Forms -->
+<form id="advanceForm" method="post" asp-page-handler="AdvanceStatus" class="hidden">
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="id" id="advanceId" />
+</form>
+<form id="deleteForm" method="post" asp-page-handler="Delete" class="hidden">
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="id" id="deleteId" />
+</form>
+
+@section Scripts {
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<script>
+    // Toast từ TempData
+    document.addEventListener('DOMContentLoaded', function () {
+        const s = document.getElementById('tempSuccessMsg');
+        const e = document.getElementById('tempErrorMsg');
+        if (s) showToast(s.textContent.trim(), 'success');
+        if (e) showToast(e.textContent.trim(), 'error');
+    });
+
+    function confirmAdvance(id, name, title, html, color) {
+        const colors = { teal: '#14B8A6', amber: '#F59E0B', slate: '#64748B' };
+        Swal.fire({
+            title: title,
+            html: html,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: colors[color] || '#002E5D',
+            cancelButtonColor: '#94A3B8',
+            confirmButtonText: 'Xác nhận',
+            cancelButtonText: 'Hủy'
+        }).then(r => {
+            if (r.isConfirmed) {
+                document.getElementById('advanceId').value = id;
+                document.getElementById('advanceForm').submit();
+            }
+        });
+    }
+
+    function confirmDelete(id, name) {
+        Swal.fire({
+            title: 'Xóa học kỳ?',
+            html: `Học kỳ <b>${name}</b> sẽ bị xóa.<br><small class="text-slate-400">Dữ liệu vẫn được lưu trong hệ thống nhưng sẽ bị ẩn đi.</small>`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#EF4444',
+            cancelButtonColor: '#94A3B8',
+            confirmButtonText: 'Xóa',
+            cancelButtonText: 'Hủy'
+        }).then(r => {
+            if (r.isConfirmed) {
+                document.getElementById('deleteId').value = id;
+                document.getElementById('deleteForm').submit();
+            }
+        });
+    }
+
+    // SignalR
+    (async function () {
+        try {
+            const conn = await signalRManager.connect('notification', '/hubs/notification');
+            await conn.invoke('JoinGroup', 'admin_all');
+            conn.on('SemesterUpdated', function (data) {
+                showToast('Dữ liệu học kỳ vừa được cập nhật.', 'info');
+            });
+        } catch (e) { console.warn('SignalR not connected', e); }
+    })();
+</script>
+}

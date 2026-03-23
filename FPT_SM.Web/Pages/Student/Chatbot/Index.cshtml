@@ -1,0 +1,289 @@
+@page
+@model FPT_SM.Web.Pages.Student.Chatbot.IndexModel
+@{
+    Layout = "_StudentLayout";
+    ViewData["Title"] = "Trợ lý AI FPT";
+}
+
+<!-- Hidden form for antiforgery token -->
+<form id="afForm" style="display:none">@Html.AntiForgeryToken()</form>
+
+<div class="flex flex-col h-[calc(100vh-140px)] max-h-[780px]" data-aos="fade-up">
+    <!-- Chat Header -->
+    <div class="bg-gradient-to-r from-fpt-navy to-blue-700 rounded-t-2xl p-5 flex items-center gap-4 shadow-sm">
+        <div class="relative">
+            <div class="w-12 h-12 bg-fpt-orange rounded-xl flex items-center justify-center shadow-lg">
+                <i data-lucide="bot" class="w-6 h-6 text-white"></i>
+            </div>
+            <div class="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-teal-400 rounded-full border-2 border-fpt-navy"></div>
+        </div>
+        <div class="flex-1">
+            <h2 class="font-black text-white text-lg">Trợ lý AI FPT</h2>
+            <p class="text-white/60 text-xs">Luôn sẵn sàng hỗ trợ bạn 24/7</p>
+        </div>
+        <button onclick="clearChat()"
+                class="flex items-center gap-1.5 bg-white/10 hover:bg-white/20 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
+                title="Xóa lịch sử chat">
+            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+            Xóa chat
+        </button>
+    </div>
+
+    <!-- Messages Area -->
+    <div class="flex-1 bg-slate-50 overflow-y-auto px-4 py-4 space-y-4" id="messagesContainer">
+        <!-- Welcome message -->
+        <div class="flex items-start gap-3">
+            <div class="w-8 h-8 bg-fpt-orange rounded-lg flex items-center justify-center flex-shrink-0 shadow-sm">
+                <i data-lucide="bot" class="w-4 h-4 text-white"></i>
+            </div>
+            <div class="max-w-[75%]">
+                <div class="bg-white rounded-2xl rounded-tl-none px-4 py-3 shadow-sm border border-slate-100">
+                    <p class="text-slate-700 text-sm">Xin chào <strong>@Model.CurrentFullName</strong>! 👋</p>
+                    <p class="text-slate-600 text-sm mt-1">Tôi là trợ lý AI của FPT. Tôi có thể giúp bạn:</p>
+                    <ul class="mt-1.5 space-y-0.5">
+                        <li class="text-slate-500 text-xs flex items-center gap-1.5"><span class="w-1 h-1 rounded-full bg-fpt-orange inline-block"></span>Xem điểm số và kết quả học tập</li>
+                        <li class="text-slate-500 text-xs flex items-center gap-1.5"><span class="w-1 h-1 rounded-full bg-fpt-orange inline-block"></span>Kiểm tra lịch học và điểm danh</li>
+                        <li class="text-slate-500 text-xs flex items-center gap-1.5"><span class="w-1 h-1 rounded-full bg-fpt-orange inline-block"></span>Thông tin học phí và số dư ví</li>
+                    </ul>
+                </div>
+                <p class="text-xs text-slate-400 mt-1 ml-1">Trợ lý AI</p>
+            </div>
+        </div>
+
+        <!-- History messages -->
+        @foreach (var msg in Model.History)
+        {
+            if (msg.IsUser)
+            {
+                <div class="flex items-end justify-end gap-3">
+                    <div class="max-w-[75%]">
+                        <div class="bg-fpt-orange text-white rounded-2xl rounded-br-none px-4 py-3 shadow-sm">
+                            <p class="text-sm">@msg.Message</p>
+                        </div>
+                        <p class="text-xs text-slate-400 mt-1 mr-1 text-right">@msg.CreatedAt.ToString("HH:mm")</p>
+                    </div>
+                    <div class="w-8 h-8 bg-fpt-navy rounded-lg flex items-center justify-center flex-shrink-0 shadow-sm">
+                        <i data-lucide="user" class="w-4 h-4 text-white"></i>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="flex items-start gap-3">
+                    <div class="w-8 h-8 bg-fpt-orange rounded-lg flex items-center justify-center flex-shrink-0 shadow-sm">
+                        <i data-lucide="bot" class="w-4 h-4 text-white"></i>
+                    </div>
+                    <div class="max-w-[75%]">
+                        <div class="bg-white rounded-2xl rounded-tl-none px-4 py-3 shadow-sm border border-slate-100">
+                            <p class="text-slate-700 text-sm whitespace-pre-line">@msg.Response</p>
+                        </div>
+                        <p class="text-xs text-slate-400 mt-1 ml-1">@msg.CreatedAt.ToString("HH:mm") · Trợ lý AI</p>
+                    </div>
+                </div>
+            }
+        }
+
+        <!-- Typing indicator -->
+        <div id="typingIndicator" class="flex items-start gap-3 hidden">
+            <div class="w-8 h-8 bg-fpt-orange rounded-lg flex items-center justify-center flex-shrink-0 shadow-sm">
+                <i data-lucide="bot" class="w-4 h-4 text-white"></i>
+            </div>
+            <div class="bg-white rounded-2xl rounded-tl-none px-4 py-3 shadow-sm border border-slate-100">
+                <div class="flex items-center gap-1">
+                    <div class="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style="animation-delay:0ms"></div>
+                    <div class="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style="animation-delay:150ms"></div>
+                    <div class="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style="animation-delay:300ms"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Suggestions -->
+    <div class="bg-white border-t border-slate-100 px-4 py-2 flex items-center gap-2 overflow-x-auto scrollbar-hide">
+        <span class="text-xs text-slate-400 flex-shrink-0">Gợi ý:</span>
+        @if (Model.Suggestions?.Any() == true)
+        {
+            @foreach (var suggestion in Model.Suggestions)
+            {
+                <button onclick="sendSuggestion('@suggestion.Replace("'", "\\'")' )"
+                        class="flex-shrink-0 text-xs font-medium bg-blue-50 hover:bg-blue-100 text-fpt-navy px-3 py-1.5 rounded-full transition-colors border border-blue-100">
+                    @Html.Raw(suggestion)
+                </button>
+            }
+        }
+        else
+        {
+            <!-- Fallback to default suggestions if none generated -->
+            <button onclick="sendSuggestion('Xem điểm của tôi')"
+                    class="flex-shrink-0 text-xs font-medium bg-orange-50 hover:bg-orange-100 text-fpt-orange px-3 py-1.5 rounded-full transition-colors border border-orange-100">
+                📊 Xem điểm của tôi
+            </button>
+            <button onclick="sendSuggestion('Lịch học hôm nay')"
+                    class="flex-shrink-0 text-xs font-medium bg-blue-50 hover:bg-blue-100 text-fpt-navy px-3 py-1.5 rounded-full transition-colors border border-blue-100">
+                📅 Lịch học hôm nay
+            </button>
+            <button onclick="sendSuggestion('Số dư ví của tôi')"
+                    class="flex-shrink-0 text-xs font-medium bg-teal-50 hover:bg-teal-100 text-teal-700 px-3 py-1.5 rounded-full transition-colors border border-teal-100">
+                💰 Số dư ví
+            </button>
+            <button onclick="sendSuggestion('Tôi có bao nhiêu buổi vắng?')"
+                    class="flex-shrink-0 text-xs font-medium bg-amber-50 hover:bg-amber-100 text-amber-700 px-3 py-1.5 rounded-full transition-colors border border-amber-100">
+                📋 Điểm danh của tôi
+            </button>
+            <button onclick="sendSuggestion('Quiz nào sắp diễn ra?')"
+                    class="flex-shrink-0 text-xs font-medium bg-purple-50 hover:bg-purple-100 text-purple-700 px-3 py-1.5 rounded-full transition-colors border border-purple-100">
+                📝 Quiz sắp tới
+            </button>
+        }
+    </div>
+
+    <!-- Input Area -->
+    <div class="bg-white rounded-b-2xl border-t border-slate-100 p-4">
+        <div class="flex items-end gap-3">
+            <div class="flex-1 relative">
+                <textarea id="messageInput"
+                          rows="1"
+                          placeholder="Nhập câu hỏi của bạn..."
+                          class="w-full border border-slate-200 rounded-xl px-4 py-3 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-fpt-orange/30 focus:border-fpt-orange transition-all resize-none max-h-32"
+                          onkeydown="handleKeyDown(event)"
+                          oninput="autoResize(this)"></textarea>
+            </div>
+            <button onclick="sendMessage()"
+                    id="sendBtn"
+                    class="flex-shrink-0 w-11 h-11 bg-fpt-orange hover:bg-orange-600 disabled:bg-slate-200 text-white rounded-xl flex items-center justify-center transition-colors shadow-sm">
+                <i data-lucide="send" class="w-5 h-5"></i>
+            </button>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    function getToken() {
+        return document.querySelector('input[name="__RequestVerificationToken"]')?.value ?? '';
+    }
+
+    const messagesContainer = document.getElementById('messagesContainer');
+    const messageInput = document.getElementById('messageInput');
+    const typingIndicator = document.getElementById('typingIndicator');
+
+    function scrollToBottom() {
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+
+    function autoResize(textarea) {
+        textarea.style.height = 'auto';
+        textarea.style.height = Math.min(textarea.scrollHeight, 128) + 'px';
+    }
+
+    function handleKeyDown(e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendMessage();
+        }
+    }
+
+    function appendUserMessage(text) {
+        const now = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+        const div = document.createElement('div');
+        div.className = 'flex items-end justify-end gap-3';
+        div.innerHTML = `
+            <div class="max-w-[75%]">
+                <div class="bg-fpt-orange text-white rounded-2xl rounded-br-none px-4 py-3 shadow-sm">
+                    <p class="text-sm">${escapeHtml(text)}</p>
+                </div>
+                <p class="text-xs text-slate-400 mt-1 mr-1 text-right">${now}</p>
+            </div>
+            <div class="w-8 h-8 bg-fpt-navy rounded-lg flex items-center justify-center flex-shrink-0 shadow-sm">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            </div>`;
+        typingIndicator.before(div);
+        scrollToBottom();
+    }
+
+    function appendAIMessage(text) {
+        const now = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+        const div = document.createElement('div');
+        div.className = 'flex items-start gap-3';
+        div.innerHTML = `
+            <div class="w-8 h-8 bg-fpt-orange rounded-lg flex items-center justify-center flex-shrink-0 shadow-sm">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><rect x="3" y="11" width="18" height="10" rx="2" ry="2"/><path d="M12 2v4m-4 1l-2-2m12 2l2-2m-6 7v2"/></svg>
+            </div>
+            <div class="max-w-[75%]">
+                <div class="bg-white rounded-2xl rounded-tl-none px-4 py-3 shadow-sm border border-slate-100">
+                    <p class="text-slate-700 text-sm whitespace-pre-line">${escapeHtml(text)}</p>
+                </div>
+                <p class="text-xs text-slate-400 mt-1 ml-1">${now} · Trợ lý AI</p>
+            </div>`;
+        typingIndicator.before(div);
+        scrollToBottom();
+    }
+
+    function showTypingIndicator() {
+        typingIndicator.classList.remove('hidden');
+        scrollToBottom();
+    }
+
+    function hideTypingIndicator() {
+        typingIndicator.classList.add('hidden');
+    }
+
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.appendChild(document.createTextNode(text));
+        return div.innerHTML;
+    }
+
+    async function sendMessage() {
+        const msg = messageInput.value.trim();
+        if (!msg) return;
+
+        messageInput.value = '';
+        messageInput.style.height = 'auto';
+        document.getElementById('sendBtn').disabled = true;
+
+        appendUserMessage(msg);
+        showTypingIndicator();
+
+        try {
+            const response = await fetch('/Student/Chatbot?handler=SendMessage', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': getToken()
+                },
+                body: JSON.stringify({ message: msg })
+            });
+
+            const data = await response.json();
+            hideTypingIndicator();
+
+            if (data.error) {
+                appendAIMessage('Xin lỗi, đã có lỗi xảy ra: ' + data.error);
+            } else {
+                appendAIMessage(data.response);
+            }
+        } catch (err) {
+            hideTypingIndicator();
+            appendAIMessage('Xin lỗi, không thể kết nối đến server. Vui lòng thử lại.');
+        }
+
+        document.getElementById('sendBtn').disabled = false;
+        messageInput.focus();
+    }
+
+    function sendSuggestion(text) {
+        messageInput.value = text;
+        sendMessage();
+    }
+
+    function clearChat() {
+        if (!confirm('Bạn có chắc muốn xóa toàn bộ lịch sử chat?')) return;
+        const msgs = messagesContainer.querySelectorAll('.flex.items-end.justify-end, .flex.items-start.gap-3:not(:first-child)');
+        msgs.forEach(m => m.remove());
+    }
+
+    // Auto-scroll on load
+    scrollToBottom();
+</script>
+}

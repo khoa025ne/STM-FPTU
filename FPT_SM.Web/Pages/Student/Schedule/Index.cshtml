@@ -1,0 +1,231 @@
+@page
+@model FPT_SM.Web.Pages.Student.Schedule.IndexModel
+@using System.Globalization
+@{
+    Layout = "_StudentLayout";
+    ViewData["Title"] = "Lịch học";
+
+    var enrollmentsByDay = Model.GetEnrollmentsByDay();
+    var timeSlots = Model.GetTimeSlots();
+    var subjectColorMap = new Dictionary<string, string>();
+    int colorIndex = 0;
+    foreach (var enrollment in Model.MyEnrollments)
+    {
+        if (!subjectColorMap.ContainsKey(enrollment.SubjectCode))
+        {
+            subjectColorMap[enrollment.SubjectCode] = Model.GetSubjectColor(colorIndex++);
+        }
+    }
+}
+
+<!-- Page Header -->
+<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6" data-aos="fade-down">
+    <div>
+        <h2 class="text-2xl font-black text-fpt-navy">Lịch học</h2>
+        <p class="text-slate-500 text-sm mt-1">Danh sách môn học theo tuần</p>
+    </div>
+</div>
+
+<!-- Stats -->
+<div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4" data-aos="fade-up" data-aos-delay="50">
+    <div class="bg-gradient-to-br from-fpt-navy to-blue-800 rounded-xl p-4 text-white">
+        <p class="text-xs text-blue-200 mb-1">Tổng môn học</p>
+        <p class="text-3xl font-black">@Model.MyEnrollments.Count</p>
+    </div>
+    <div class="bg-gradient-to-br from-teal-400 to-teal-600 rounded-xl p-4 text-white">
+        <p class="text-xs text-teal-100 mb-1">Kỳ học hiện tại</p>
+        <p class="text-base font-bold">@(Model.SelectedSemester?.Name ?? "N/A")</p>
+    </div>
+    <div class="bg-gradient-to-br from-fpt-orange to-orange-600 rounded-xl p-4 text-white">
+        <p class="text-xs text-orange-100 mb-1">Tổng tín chỉ</p>
+        <p class="text-3xl font-black">0</p>
+    </div>
+</div>
+
+<!-- Schedule Grid -->
+<div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden" data-aos="fade-up" data-aos-delay="100">
+    <div class="px-6 py-4 border-b border-slate-100">
+        <h3 class="font-bold text-slate-800">Lịch học tuần này</h3>
+        <p class="text-xs text-slate-400 mt-1">Bảng dưới đây hiển thị các buổi học trong tuần</p>
+    </div>
+
+    @if (!Model.MyEnrollments.Any())
+    {
+        <div class="text-center py-16 text-slate-400 px-6">
+            <i data-lucide="calendar" class="w-12 h-12 mx-auto mb-3 opacity-30"></i>
+            <p class="font-medium">Chưa có môn học nào</p>
+            <p class="text-sm mt-1">Vui lòng đăng ký môn học để xem lịch học</p>
+            <a href="/Student/Enrollment" class="inline-block mt-4 px-4 py-2 bg-fpt-orange text-white rounded-lg text-sm font-semibold hover:bg-orange-600">
+                Đăng ký học phần
+            </a>
+        </div>
+    }
+    else
+    {
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead class="bg-slate-50 text-slate-500 text-xs font-semibold uppercase tracking-wider">
+                    <tr>
+                        <th class="px-4 py-3 text-left" style="min-width: 100px;">Thời gian</th>
+                        @foreach (var day in Model.DayMap.Keys)
+                        {
+                            <th class="px-4 py-3 text-center border-l border-slate-200" style="min-width: 200px;">
+                                @Model.DayMap[day]
+                            </th>
+                        }
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (timeSlots.Count == 0)
+                    {
+                        <tr>
+                            <td colspan="7" class="px-4 py-6 text-center text-slate-400">
+                                <i data-lucide="inbox" class="w-8 h-8 mx-auto mb-2 opacity-30"></i>
+                                <p>Không có buổi học nào</p>
+                            </td>
+                        </tr>
+                    }
+                    else
+                    {
+                        @foreach (var (slotIndex, startTime, displayTime) in timeSlots)
+                        {
+                            <tr class="border-t border-slate-100 hover:bg-blue-50/30 transition-colors">
+                                <td class="px-4 py-4 bg-slate-50 text-slate-700 font-semibold text-sm">
+                                    <div class="flex flex-col">
+                                        <span>@displayTime</span>
+                                    </div>
+                                </td>
+
+                                @foreach (var day in Model.DayMap.Keys)
+                                {
+                                    var enrollment = enrollmentsByDay[day].FirstOrDefault(e => e.StartTime == startTime);
+                                    <td class="px-4 py-4 border-l border-slate-200 align-top">
+                                        @if (enrollment != null)
+                                        {
+                                            var colorGradient = subjectColorMap[enrollment.SubjectCode];
+                                            var endHour = enrollment.EndTime.Hours;
+                                            var endMin = enrollment.EndTime.Minutes;
+
+                                            <div class="bg-gradient-to-br @colorGradient rounded-lg p-3 text-white shadow-sm hover:shadow-md transition-shadow cursor-default group"
+                                                 title="@enrollment.SubjectName (@enrollment.SubjectCode)">
+                                                <!-- Subject Code & Name -->
+                                                <div class="mb-2">
+                                                    <div class="font-bold text-sm leading-tight">@enrollment.SubjectCode</div>
+                                                    <div class="text-xs text-white/90">@enrollment.SubjectName.Substring(0, Math.Min(20, enrollment.SubjectName.Length))</div>
+                                                </div>
+
+                                                <!-- Room & Time -->
+                                                <div class="text-xs text-white/80 space-y-1">
+                                                    @if (!string.IsNullOrEmpty(enrollment.RoomNumber))
+                                                    {
+                                                        <div class="flex items-center gap-1">
+                                                            <i data-lucide="map-pin" class="w-3 h-3"></i>
+                                                            <span>Phòng @enrollment.RoomNumber</span>
+                                                        </div>
+                                                    }
+                                                    <div class="flex items-center gap-1">
+                                                        <i data-lucide="clock" class="w-3 h-3"></i>
+                                                        <span>@displayTime - @endHour:@(endMin.ToString("D2"))</span>
+                                                    </div>
+                                                    <div class="flex items-center gap-1">
+                                                        <i data-lucide="user" class="w-3 h-3"></i>
+                                                        <span>@(enrollment.TeacherName.Substring(0, Math.Min(15, enrollment.TeacherName.Length)))</span>
+                                                    </div>
+                                                </div>
+
+                                                <!-- Hover Badge -->
+                                                <div class="mt-2 pt-2 border-t border-white/20 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <span class="inline-block text-xs bg-white/20 px-2 py-1 rounded-full">Đã thanh toán</span>
+                                                </div>
+                                            </div>
+                                        }
+                                    </td>
+                                }
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
+
+<!-- Legend -->
+<div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 mt-4" data-aos="fade-up">
+    <h4 class="text-sm font-bold text-slate-800 mb-3">Chú giải môn học</h4>
+    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+        @foreach (var subject in Model.MyEnrollments.GroupBy(e => e.SubjectCode).Select(g => g.First()))
+        {
+            var color = subjectColorMap[subject.SubjectCode];
+            <div class="flex items-center gap-3">
+                <div class="w-6 h-6 rounded-lg bg-gradient-to-br @color flex-shrink-0"></div>
+                <span class="text-sm text-slate-700">
+                    <strong>@subject.SubjectCode</strong> - @subject.SubjectName
+                </span>
+            </div>
+        }
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    // SignalR connection for real-time schedule updates using signalRManager
+    (async function() {
+        try {
+            const conn = await signalRManager.connect('notification', '/hubs/notification');
+            const userId = @(ViewData["UserId"] ?? "0");
+
+            await conn.invoke('JoinGroup', `student_${userId}`);
+            await conn.invoke('JoinGroup', 'student_all');
+
+            conn.on('NewEnrollment', async function (data) {
+                showToast('Đăng ký thành công', 'success');
+                await new Promise(r => setTimeout(r, 1000));
+                window.location.reload();
+            });
+
+            conn.on('ClassUpdated', async function (data) {
+                if (data.action === 'delete') {
+                    showToast(`Lớp bị hủy: ${data.classCode}`, 'error');
+                    await new Promise(r => setTimeout(r, 1500));
+                    window.location.reload();
+                }
+            });
+
+            conn.on('EnrollmentUpdated', async function (data) {
+                showToast('Lịch học đã thay đổi', 'info');
+                await new Promise(r => setTimeout(r, 1000));
+                window.location.reload();
+            });
+
+        } catch (e) {
+            console.warn('SignalR not connected:', e);
+        }
+    })();
+
+
+    function showToast(message, type = 'info') {
+        const bgColor = type === 'success' ? 'bg-teal-600' : type === 'error' ? 'bg-red-500' : 'bg-blue-600';
+        const toast = document.createElement('div');
+        toast.className = `fixed top-5 right-5 z-50 ${bgColor} text-white px-5 py-3 rounded-xl shadow-lg flex items-center gap-2`;
+        toast.innerHTML = `
+            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/>
+            </svg>
+            <span>${message}</span>
+        `;
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 3000);
+    }
+
+    // Smooth scroll to current time on load
+    window.addEventListener('load', () => {
+        const now = new Date();
+        const currentHour = String(now.getHours()).padStart(2, '0');
+        const element = document.querySelector(`td:has-text("${currentHour}")`);
+        if (element) {
+            element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+    });
+</script>
+}

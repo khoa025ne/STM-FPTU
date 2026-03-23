@@ -1,0 +1,394 @@
+@page
+@model FPT_SM.Web.Pages.Admin.Classes.IndexModel
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Quản lý Lớp học";
+}
+
+@if (TempData["Success"] != null)
+{
+    <div id="tempSuccessMsg" class="hidden">@TempData["Success"]</div>
+}
+@if (TempData["Error"] != null)
+{
+    <div id="tempErrorMsg" class="hidden">@TempData["Error"]</div>
+}
+
+<!-- Page Header -->
+<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6" data-aos="fade-down">
+    <div>
+        <h2 class="text-2xl font-black text-fpt-navy">Quản lý Lớp học</h2>
+        <p class="text-slate-500 text-sm mt-1">Quản lý tất cả lớp học trong hệ thống</p>
+    </div>
+    <a href="/Admin/Classes/Create"
+       class="inline-flex items-center gap-2 bg-fpt-orange hover:bg-orange-500 text-white font-semibold px-5 py-2.5 rounded-xl text-sm transition-all hover:shadow-lg">
+        <i data-lucide="plus" class="w-4 h-4"></i>
+        Tạo lớp học
+    </a>
+</div>
+
+<!-- Stats -->
+<div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5" data-aos="fade-up" data-aos-delay="50">
+    <div class="bg-gradient-to-br from-fpt-navy to-blue-800 rounded-xl p-4 text-white">
+        <p class="text-xs text-blue-200 mb-1">Tổng lớp học</p>
+        <p class="text-3xl font-black">@Model.Classes.Count</p>
+    </div>
+    <div class="bg-gradient-to-br from-sky-400 to-sky-600 rounded-xl p-4 text-white">
+        <p class="text-xs text-sky-100 mb-1">Đang mở</p>
+        <p class="text-3xl font-black">@Model.Classes.Count(c => c.Status == 1)</p>
+    </div>
+    <div class="bg-gradient-to-br from-teal-400 to-teal-600 rounded-xl p-4 text-white">
+        <p class="text-xs text-teal-100 mb-1">Đang học</p>
+        <p class="text-3xl font-black">@Model.Classes.Count(c => c.Status == 2)</p>
+    </div>
+    <div class="bg-gradient-to-br from-fpt-orange to-orange-600 rounded-xl p-4 text-white">
+        <p class="text-xs text-orange-100 mb-1">Tổng sinh viên</p>
+        <p class="text-3xl font-black">@Model.Classes.Sum(c => c.Enrolled)</p>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 mb-4" data-aos="fade-up" data-aos-delay="80">
+    <form method="get" class="flex flex-col sm:flex-row gap-3">
+        <select name="SemesterId" class="px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-fpt-navy/20 text-sm bg-white min-w-[180px]">
+            <option value="">Tất cả học kỳ</option>
+            @foreach (var sem in Model.Semesters)
+            {
+                @if (Model.SemesterId == sem.Id)
+                {
+                    <option value="@sem.Id" selected>@sem.Name</option>
+                }
+                else
+                {
+                    <option value="@sem.Id">@sem.Name</option>
+                }
+            }
+        </select>
+        <select name="SubjectId" class="px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-fpt-navy/20 text-sm bg-white min-w-[180px]">
+            <option value="">Tất cả môn học</option>
+            @foreach (var sub in Model.Subjects)
+            {
+                @if (Model.SubjectId == sub.Id)
+                {
+                    <option value="@sub.Id" selected>@sub.Code - @sub.Name</option>
+                }
+                else
+                {
+                    <option value="@sub.Id">@sub.Code - @sub.Name</option>
+                }
+            }
+        </select>
+        <select name="Status" class="px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-fpt-navy/20 text-sm bg-white min-w-[150px]">
+            <option value="">Tất cả trạng thái</option>
+            @if (Model.Status == 1)
+            {
+                <option value="1" selected>Đang mở</option>
+            }
+            else
+            {
+                <option value="1">Đang mở</option>
+            }
+            @if (Model.Status == 2)
+            {
+                <option value="2" selected>Đang học</option>
+            }
+            else
+            {
+                <option value="2">Đang học</option>
+            }
+            @if (Model.Status == 3)
+            {
+                <option value="3" selected>Đã kết thúc</option>
+            }
+            else
+            {
+                <option value="3">Đã kết thúc</option>
+            }
+            @if (Model.Status == 0)
+            {
+                <option value="0" selected>Đã hủy</option>
+            }
+            else
+            {
+                <option value="0">Đã hủy</option>
+            }
+        </select>
+        <button type="submit" class="px-5 py-2.5 bg-fpt-navy text-white rounded-xl text-sm font-semibold hover:bg-blue-900 transition-colors">
+            Lọc
+        </button>
+        <a href="/Admin/Classes" class="px-5 py-2.5 bg-slate-100 text-slate-600 rounded-xl text-sm font-semibold hover:bg-slate-200 transition-colors text-center">
+            Xóa lọc
+        </a>
+    </form>
+</div>
+
+<!-- Table -->
+<div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden" data-aos="fade-up" data-aos-delay="100">
+    <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+        <h3 class="font-bold text-slate-800">Danh sách lớp học</h3>
+        <span class="text-sm text-slate-400">@Model.Classes.Count lớp học</span>
+    </div>
+
+    <!-- Skeleton -->
+    <div id="skeletonRows" class="hidden">
+        @for (int i = 0; i < 5; i++)
+        {
+            <div class="flex items-center gap-4 px-6 py-4 border-b border-slate-50 animate-pulse">
+                <div class="h-4 bg-slate-200 rounded w-24"></div>
+                <div class="h-4 bg-slate-200 rounded flex-1"></div>
+                <div class="h-4 bg-slate-200 rounded w-28"></div>
+                <div class="h-8 bg-slate-200 rounded-full w-32"></div>
+                <div class="h-6 bg-slate-200 rounded-full w-20"></div>
+                <div class="flex gap-2 ml-auto">
+                    <div class="h-8 bg-slate-200 rounded-lg w-16"></div>
+                </div>
+            </div>
+        }
+    </div>
+
+    <div class="overflow-x-auto">
+        @if (!Model.Classes.Any())
+        {
+            <div class="text-center py-16 text-slate-400">
+                <i data-lucide="layout-grid" class="w-12 h-12 mx-auto mb-3 opacity-30"></i>
+                <p class="font-medium">Không tìm thấy lớp học nào</p>
+                <p class="text-sm mt-1">Thử thay đổi bộ lọc hoặc tạo lớp học mới</p>
+            </div>
+        }
+        else
+        {
+            <table class="w-full text-sm">
+                <thead class="bg-slate-50 text-slate-500 text-xs font-semibold uppercase tracking-wider">
+                    <tr>
+                        <th class="px-4 py-3.5 text-left">Mã lớp</th>
+                        <th class="px-4 py-3.5 text-left">Môn học</th>
+                        <th class="px-4 py-3.5 text-left">Giáo viên</th>
+                        <th class="px-4 py-3.5 text-left">Lịch học</th>
+                        <th class="px-4 py-3.5 text-left">Kỳ học</th>
+                        <th class="px-4 py-3.5 text-left">Sĩ số</th>
+                        <th class="px-4 py-3.5 text-left">Phòng</th>
+                        <th class="px-4 py-3.5 text-left">Trạng thái</th>
+                        <th class="px-4 py-3.5 text-right">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-50">
+                    @foreach (var cls in Model.Classes)
+                    {
+                        var pct = cls.Capacity > 0 ? (int)Math.Round((double)cls.Enrolled / cls.Capacity * 100) : 0;
+                        var barColor = pct >= 90 ? "bg-red-500" : pct >= 70 ? "bg-amber-500" : "bg-teal-500";
+                        var badgeClass = cls.Status switch {
+                            0 => "bg-red-100 text-red-700",
+                            1 => "bg-sky-100 text-sky-700",
+                            2 => "bg-teal-100 text-teal-700",
+                            3 => "bg-slate-100 text-slate-600",
+                            _ => "bg-gray-100 text-gray-600"
+                        };
+                        var dotColor = cls.Status switch {
+                            0 => "bg-red-500",
+                            1 => "bg-sky-500",
+                            2 => "bg-teal-500",
+                            3 => "bg-slate-400",
+                            _ => "bg-gray-400"
+                        };
+                        <tr class="hover:bg-slate-50 transition-colors">
+                            <td class="px-4 py-3.5">
+                                <span class="text-xs font-mono bg-fpt-navy/10 text-fpt-navy px-2.5 py-1 rounded font-semibold">@cls.Name</span>
+                            </td>
+                            <td class="px-4 py-3.5">
+                                <p class="font-semibold text-slate-800">@cls.SubjectCode</p>
+                                <p class="text-xs text-slate-400 mt-0.5 truncate max-w-[150px]">@cls.SubjectName</p>
+                            </td>
+                            <td class="px-4 py-3.5 text-slate-600">@cls.TeacherName</td>
+                            <td class="px-4 py-3.5">
+                                <p class="text-slate-700 font-medium">@cls.SlotName</p>
+                                <p class="text-xs text-slate-400">@cls.DayName · @cls.StartTime.ToString(@"hh\:mm") - @cls.EndTime.ToString(@"hh\:mm")</p>
+                            </td>
+                            <td class="px-4 py-3.5 text-slate-500 text-xs">@cls.Name</td>
+                            <td class="px-4 py-3.5 min-w-[120px]">
+                                <div class="flex items-center gap-2">
+                                    <div class="flex-1 bg-slate-100 rounded-full h-1.5">
+                                        <div class="h-1.5 rounded-full @barColor transition-all" style="width: @pct%"></div>
+                                    </div>
+                                    <span class="text-xs text-slate-600 whitespace-nowrap">@cls.Enrolled/@cls.Capacity</span>
+                                </div>
+                                <p class="text-xs text-slate-400 mt-0.5">@pct% đã đăng ký</p>
+                            </td>
+                            <td class="px-4 py-3.5 text-slate-500 text-xs">@(cls.RoomNumber ?? "—")</td>
+                            <td class="px-4 py-3.5">
+                                <span class="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full @badgeClass">
+                                    <span class="w-1.5 h-1.5 rounded-full @dotColor"></span>
+                                    @cls.StatusName
+                                </span>
+                            </td>
+                            <td class="px-4 py-3.5">
+                                <div class="flex items-center justify-end gap-1.5">
+                                    @if (cls.Status == 1)
+                                    {
+                                        <a href="/Admin/Classes/Edit?id=@cls.Id"
+                                           class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold bg-sky-100 text-sky-700 hover:bg-sky-200 transition-colors">
+                                            <i data-lucide="edit-2" class="w-3 h-3"></i> Sửa
+                                        </a>
+                                    }
+                                    @if (cls.Status == 1 && cls.Enrolled == 0)
+                                    {
+                                        <button type="button"
+                                                onclick="confirmDelete(@cls.Id, '@cls.Name')"
+                                                class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold bg-red-100 text-red-600 hover:bg-red-200 transition-colors">
+                                            <i data-lucide="trash-2" class="w-3 h-3"></i> Xóa
+                                        </button>
+                                    }
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+</div>
+
+<!-- Modal Tạo lớp học -->
+<div id="createModal" class="fixed inset-0 z-50 hidden">
+    <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" onclick="closeCreateModal()"></div>
+    <div class="relative z-10 flex items-center justify-center min-h-screen p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto" onclick="event.stopPropagation()">
+            <div class="flex items-center justify-between p-6 border-b border-slate-100 sticky top-0 bg-white z-10">
+                <div>
+                    <h3 class="text-lg font-bold text-fpt-navy">Tạo lớp học mới</h3>
+                    <p class="text-sm text-slate-400 mt-0.5">Mã lớp sẽ được tạo tự động</p>
+                </div>
+                <button type="button" onclick="closeCreateModal()" class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 text-slate-400">
+                    <i data-lucide="x" class="w-4 h-4"></i>
+                </button>
+            </div>
+            <form method="post" asp-page-handler="Create" class="p-6 space-y-4">
+                @Html.AntiForgeryToken()
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-1.5">Tên / Mã lớp học <span class="text-red-500">*</span></label>
+                    <input type="text" name="CreateDto.Name" required placeholder="Ví dụ: PRF192_C01"
+                           class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-fpt-navy/20 text-sm font-mono uppercase" />
+                    <p class="text-xs text-slate-400 mt-1">Gợi ý: [MãMôn]_C[Số] (ví dụ: PRF192_C01)</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-1.5">Môn học <span class="text-red-500">*</span></label>
+                    <select name="CreateDto.SubjectId" required
+                            class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-fpt-navy/20 text-sm bg-white">
+                        <option value="">-- Chọn môn học --</option>
+                        @foreach (var sub in Model.Subjects)
+                        {
+                            <option value="@sub.Id">@sub.Code - @sub.Name</option>
+                        }
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-1.5">Giáo viên <span class="text-red-500">*</span></label>
+                    <select name="CreateDto.TeacherId" required
+                            class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-fpt-navy/20 text-sm bg-white">
+                        <option value="">-- Chọn giáo viên --</option>
+                        @foreach (var teacher in Model.Teachers)
+                        {
+                            <option value="@teacher.Id">@teacher.FullName</option>
+                        }
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-1.5">Ca học (Slot) <span class="text-red-500">*</span></label>
+                    <select name="CreateDto.SlotId" required
+                            class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-fpt-navy/20 text-sm bg-white">
+                        <option value="">-- Chọn ca học --</option>
+                        @foreach (var slot in Model.Slots)
+                        {
+                            <option value="@slot.Id">@slot.Name - @slot.DayName (@slot.StartTime.ToString(@"hh\:mm") - @slot.EndTime.ToString(@"hh\:mm"))</option>
+                        }
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-1.5">Học kỳ <span class="text-red-500">*</span></label>
+                    <select name="CreateDto.SemesterId" required
+                            class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-fpt-navy/20 text-sm bg-white">
+                        <option value="">-- Chọn học kỳ --</option>
+                        @foreach (var sem in Model.Semesters)
+                        {
+                            <option value="@sem.Id">@sem.Name (@sem.Code)</option>
+                        }
+                    </select>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1.5">Sĩ số tối đa <span class="text-red-500">*</span></label>
+                        <input type="number" name="CreateDto.Capacity" value="30" min="1" max="100"
+                               class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-fpt-navy/20 text-sm" />
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1.5">Phòng học</label>
+                        <input type="text" name="CreateDto.RoomNumber" placeholder="Ví dụ: P201"
+                               class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-fpt-navy/20 text-sm" />
+                    </div>
+                </div>
+                <div class="flex gap-3 pt-2">
+                    <button type="button" onclick="closeCreateModal()"
+                            class="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-semibold text-sm hover:bg-slate-50 transition-colors">
+                        Hủy
+                    </button>
+                    <button type="submit"
+                            class="flex-1 px-4 py-2.5 rounded-xl bg-fpt-navy text-white font-semibold text-sm hover:bg-blue-900 transition-colors">
+                        Tạo lớp học
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Hidden delete form -->
+<form id="deleteForm" method="post" asp-page-handler="Delete" class="hidden">
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="id" id="deleteId" />
+</form>
+
+@section Scripts {
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const s = document.getElementById('tempSuccessMsg');
+        const e = document.getElementById('tempErrorMsg');
+        if (s) showToast(s.textContent.trim(), 'success');
+        if (e) showToast(e.textContent.trim(), 'error');
+    });
+
+    function openCreateModal() {
+        document.getElementById('createModal').classList.remove('hidden');
+    }
+    function closeCreateModal() {
+        document.getElementById('createModal').classList.add('hidden');
+    }
+
+    function confirmDelete(id, name) {
+        Swal.fire({
+            title: 'Xóa lớp học?',
+            html: `Lớp <b>${name}</b> sẽ bị xóa vĩnh viễn.<br><small class="text-slate-400">Hành động này không thể hoàn tác!</small>`,
+            icon: 'error',
+            showCancelButton: true,
+            confirmButtonColor: '#EF4444',
+            cancelButtonColor: '#94A3B8',
+            confirmButtonText: 'Xóa',
+            cancelButtonText: 'Hủy'
+        }).then(r => {
+            if (r.isConfirmed) {
+                document.getElementById('deleteId').value = id;
+                document.getElementById('deleteForm').submit();
+            }
+        });
+    }
+
+    // SignalR
+    (async function () {
+        try {
+            const conn = await signalRManager.connect('notification', '/hubs/notification');
+            await conn.invoke('JoinGroup', 'admin_all');
+            conn.on('ClassUpdated', function (data) {
+                showToast('Dữ liệu lớp học vừa được cập nhật.', 'info');
+            });
+        } catch (e) { console.warn('SignalR not connected', e); }
+    })();
+</script>
+}

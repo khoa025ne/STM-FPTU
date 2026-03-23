@@ -1,0 +1,145 @@
+@page
+@model FPT_SM.Web.Pages.Admin.Semesters.EditModel
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = $"Sửa: {Model.Semester?.Name ?? "Học kỳ"}";
+}
+
+<!-- Breadcrumb -->
+<nav class="flex items-center gap-2 text-sm text-slate-400 mb-6" data-aos="fade-down">
+    <a href="/Admin/Semesters" class="hover:text-fpt-navy transition-colors">Quản lý Học kỳ</a>
+    <i data-lucide="chevron-right" class="w-4 h-4"></i>
+    <span class="text-slate-600 font-medium">Sửa thông tin</span>
+</nav>
+
+@if (Model.Semester == null)
+{
+    <div class="text-center py-20 text-slate-400">
+        <i data-lucide="calendar-x" class="w-12 h-12 mx-auto mb-3 opacity-30"></i>
+        <p class="font-medium">Không tìm thấy học kỳ</p>
+        <a href="/Admin/Semesters" class="text-fpt-orange text-sm mt-2 inline-block hover:underline">Quay lại danh sách</a>
+    </div>
+}
+else
+{
+    var statusBadge = Model.Semester.Status switch {
+        1 => "bg-sky-100 text-sky-700",
+        2 => "bg-teal-100 text-teal-700",
+        3 => "bg-amber-100 text-amber-700",
+        0 => "bg-slate-100 text-slate-600",
+        _ => "bg-slate-100 text-slate-600"
+    };
+    var statusLabel = Model.Semester.Status switch {
+        1 => "Sắp tới",
+        2 => "Đang diễn ra",
+        3 => "Đã kết thúc",
+        0 => "Đã đóng",
+        _ => "Không xác định"
+    };
+
+    <div class="max-w-2xl mx-auto space-y-5" data-aos="fade-up">
+
+        <!-- Semester Info Card -->
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 flex items-center gap-4">
+            <div class="w-16 h-16 rounded-full bg-gradient-to-br from-fpt-navy to-blue-700 flex items-center justify-center text-white text-2xl font-black flex-shrink-0 ring-2 ring-fpt-orange/30">
+                <i data-lucide="calendar" class="w-8 h-8"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+                <h3 class="font-bold text-slate-800 text-lg">@Model.Semester.Name</h3>
+                <p class="text-slate-400 text-sm">Mã: @Model.Semester.Code</p>
+                <div class="flex items-center gap-2 mt-1.5">
+                    <span class="text-xs font-semibold px-2.5 py-0.5 rounded-full @statusBadge">@statusLabel</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Form -->
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+            <div class="bg-gradient-to-r from-fpt-navy to-blue-800 px-6 py-4">
+                <div class="flex items-center gap-3">
+                    <i data-lucide="edit-3" class="w-5 h-5 text-white"></i>
+                    <h2 class="text-white font-bold">Cập nhật thông tin</h2>
+                </div>
+            </div>
+
+            <form method="post" class="p-6 space-y-5">
+                @Html.AntiForgeryToken()
+                <input type="hidden" asp-for="Id" />
+
+                <!-- Validation Summary -->
+                @if (!ViewData.ModelState.IsValid)
+                {
+                    <div class="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3">
+                        <i data-lucide="alert-circle" class="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5"></i>
+                        <div>
+                            <p class="text-sm font-semibold text-red-700 mb-1">Vui lòng kiểm tra lại:</p>
+                            <ul class="text-sm text-red-600 space-y-0.5">
+                                @foreach (var error in ViewData.ModelState.Values.SelectMany(v => v.Errors))
+                                {
+                                    <li>• @error.ErrorMessage</li>
+                                }
+                            </ul>
+                        </div>
+                    </div>
+                }
+
+                <!-- Tên học kỳ -->
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-1.5">
+                        Tên học kỳ <span class="text-red-500">*</span>
+                    </label>
+                    <input asp-for="UpdateDto.Name" type="text" placeholder="Ví dụ: Fall 2025"
+                           class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-fpt-navy/20 focus:border-fpt-navy/40 text-sm transition-all" />
+                    <span asp-validation-for="UpdateDto.Name" class="text-xs text-red-500 mt-1 block"></span>
+                </div>
+
+                <!-- Mã học kỳ -->
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-1.5">
+                        Mã học kỳ <span class="text-red-500">*</span>
+                    </label>
+                    <input asp-for="UpdateDto.Code" type="text" placeholder="Ví dụ: FA25"
+                           class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-fpt-navy/20 focus:border-fpt-navy/40 text-sm transition-all" />
+                    <span asp-validation-for="UpdateDto.Code" class="text-xs text-red-500 mt-1 block"></span>
+                </div>
+
+                <!-- Ngày bắt đầu + Ngày kết thúc -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1.5">
+                            Ngày bắt đầu <span class="text-red-500">*</span>
+                        </label>
+                        <input asp-for="UpdateDto.StartDate" type="date"
+                               class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-fpt-navy/20 focus:border-fpt-navy/40 text-sm transition-all" />
+                        <span asp-validation-for="UpdateDto.StartDate" class="text-xs text-red-500 mt-1 block"></span>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1.5">
+                            Ngày kết thúc <span class="text-red-500">*</span>
+                        </label>
+                        <input asp-for="UpdateDto.EndDate" type="date"
+                               class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-fpt-navy/20 focus:border-fpt-navy/40 text-sm transition-all" />
+                        <span asp-validation-for="UpdateDto.EndDate" class="text-xs text-red-500 mt-1 block"></span>
+                    </div>
+                </div>
+
+                <!-- Divider -->
+                <hr class="border-slate-100" />
+
+                <!-- Actions -->
+                <div class="flex items-center justify-between pt-1">
+                    <a href="/Admin/Semesters"
+                       class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border border-slate-200 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-colors">
+                        <i data-lucide="arrow-left" class="w-4 h-4"></i>
+                        Hủy bỏ
+                    </a>
+                    <button type="submit"
+                            class="inline-flex items-center gap-2 px-6 py-2.5 bg-fpt-orange hover:bg-orange-500 text-white font-bold rounded-xl text-sm transition-all hover:shadow-lg">
+                        <i data-lucide="save" class="w-4 h-4"></i>
+                        Cập nhật
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+}

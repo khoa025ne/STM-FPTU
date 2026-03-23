@@ -1,0 +1,149 @@
+@page
+@model FPT_SM.Web.Pages.Admin.Classes.CreateModel
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Tạo lớp học";
+}
+
+<!-- Breadcrumb -->
+<nav class="flex items-center gap-2 text-sm text-slate-400 mb-6" data-aos="fade-down">
+    <a href="/Admin/Classes" class="hover:text-fpt-navy transition-colors">Quản lý Lớp học</a>
+    <i data-lucide="chevron-right" class="w-4 h-4"></i>
+    <span class="text-slate-600 font-medium">Tạo lớp học</span>
+</nav>
+
+<div class="max-w-2xl mx-auto" data-aos="fade-up">
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+        <!-- Card Header -->
+        <div class="bg-gradient-to-r from-fpt-navy to-blue-800 px-6 py-5">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
+                    <i data-lucide="users-3" class="w-5 h-5 text-white"></i>
+                </div>
+                <div>
+                    <h2 class="text-white font-bold text-lg">Tạo lớp học</h2>
+                    <p class="text-white/60 text-sm">Điền đầy đủ thông tin bên dưới</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Form -->
+        <form method="post" class="p-6 space-y-5">
+            @Html.AntiForgeryToken()
+
+            <!-- Validation Summary -->
+            @if (!ViewData.ModelState.IsValid)
+            {
+                <div class="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3">
+                    <i data-lucide="alert-circle" class="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5"></i>
+                    <div>
+                        <p class="text-sm font-semibold text-red-700 mb-1">Vui lòng kiểm tra lại thông tin:</p>
+                        <ul class="text-sm text-red-600 space-y-0.5">
+                            @foreach (var error in ViewData.ModelState.Values.SelectMany(v => v.Errors))
+                            {
+                                <li>• @error.ErrorMessage</li>
+                            }
+                        </ul>
+                    </div>
+                </div>
+            }
+
+            <!-- Mã lớp học -->
+            <div>
+                <label class="block text-sm font-semibold text-slate-700 mb-1.5">
+                    Mã lớp học <span class="text-red-500">*</span>
+                </label>
+                <input asp-for="CreateDto.Name" type="text" placeholder="Ví dụ: CLS001"
+                       class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-fpt-navy/20 focus:border-fpt-navy/40 text-sm transition-all" />
+                <span asp-validation-for="CreateDto.Name" class="text-xs text-red-500 mt-1 block"></span>
+            </div>
+
+            <!-- Môn học + Giáo viên -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-1.5">
+                        Môn học <span class="text-red-500">*</span>
+                    </label>
+                    <select asp-for="CreateDto.SubjectId" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-fpt-navy/20 focus:border-fpt-navy/40 text-sm transition-all">
+                        <option value="">-- Chọn môn học --</option>
+                        @foreach (var subject in Model.Subjects)
+                        {
+                            <option value="@subject.Id">@subject.Name (@subject.Code)</option>
+                        }
+                    </select>
+                    <span asp-validation-for="CreateDto.SubjectId" class="text-xs text-red-500 mt-1 block"></span>
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-1.5">
+                        Giáo viên <span class="text-red-500">*</span>
+                    </label>
+                    <select asp-for="CreateDto.TeacherId" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-fpt-navy/20 focus:border-fpt-navy/40 text-sm transition-all">
+                        <option value="">-- Chọn giáo viên --</option>
+                        @foreach (var teacher in Model.Teachers)
+                        {
+                            <option value="@teacher.Id">@teacher.FullName</option>
+                        }
+                    </select>
+                    <span asp-validation-for="CreateDto.TeacherId" class="text-xs text-red-500 mt-1 block"></span>
+                </div>
+            </div>
+
+            <!-- Slot + Học kỳ -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-1.5">
+                        Slot <span class="text-red-500">*</span>
+                    </label>
+                    <select asp-for="CreateDto.SlotId" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-fpt-navy/20 focus:border-fpt-navy/40 text-sm transition-all">
+                        <option value="">-- Chọn slot --</option>
+                        @foreach (var slot in Model.Slots)
+                        {
+                            <option value="@slot.Id">@slot.Name (@slot.StartTime - @slot.EndTime)</option>
+                        }
+                    </select>
+                    <span asp-validation-for="CreateDto.SlotId" class="text-xs text-red-500 mt-1 block"></span>
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-1.5">
+                        Học kỳ <span class="text-red-500">*</span>
+                    </label>
+                    <select asp-for="CreateDto.SemesterId" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-fpt-navy/20 focus:border-fpt-navy/40 text-sm transition-all">
+                        <option value="">-- Chọn học kỳ --</option>
+                        @foreach (var semester in Model.Semesters)
+                        {
+                            <option value="@semester.Id">@semester.Name (@semester.Code)</option>
+                        }
+                    </select>
+                    <span asp-validation-for="CreateDto.SemesterId" class="text-xs text-red-500 mt-1 block"></span>
+                </div>
+            </div>
+
+            <!-- Sức chứa -->
+            <div>
+                <label class="block text-sm font-semibold text-slate-700 mb-1.5">
+                    Sức chứa <span class="text-red-500">*</span>
+                </label>
+                <input asp-for="CreateDto.Capacity" type="number" placeholder="Ví dụ: 30" min="1"
+                       class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-fpt-navy/20 focus:border-fpt-navy/40 text-sm transition-all" />
+                <span asp-validation-for="CreateDto.Capacity" class="text-xs text-red-500 mt-1 block"></span>
+            </div>
+
+            <!-- Divider -->
+            <hr class="border-slate-100" />
+
+            <!-- Actions -->
+            <div class="flex items-center justify-between pt-1">
+                <a href="/Admin/Classes"
+                   class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border border-slate-200 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-colors">
+                    <i data-lucide="arrow-left" class="w-4 h-4"></i>
+                    Hủy bỏ
+                </a>
+                <button type="submit"
+                        class="inline-flex items-center gap-2 px-6 py-2.5 bg-fpt-orange hover:bg-orange-500 text-white font-bold rounded-xl text-sm transition-all hover:shadow-lg">
+                    <i data-lucide="save" class="w-4 h-4"></i>
+                    Tạo lớp học
+                </button>
+            </div>
+        </form>
+    </div>
+</div>

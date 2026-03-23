@@ -1,0 +1,651 @@
+@page
+@model FPT_SM.Web.Pages.Teacher.Quizzes.IndexModel
+@{
+    Layout = "_TeacherLayout";
+    ViewData["Title"] = "Quản lý Quiz";
+}
+
+<div class="flex items-center justify-between mb-6" data-aos="fade-down">
+    <div>
+        <h1 class="text-2xl font-black text-fpt-navy">Quản lý Quiz</h1>
+        <p class="text-slate-400 text-sm mt-0.5">Tạo và quản lý bài kiểm tra cho lớp học</p>
+    </div>
+</div>
+
+@if (TempData["Success"] != null)
+{
+    <div class="bg-teal-50 border border-teal-200 rounded-xl p-4 mb-5 flex items-center gap-3">
+        <i data-lucide="check-circle" class="w-5 h-5 text-teal-500 flex-shrink-0"></i>
+        <p class="text-teal-700 text-sm font-medium">@TempData["Success"]</p>
+    </div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="bg-red-50 border border-red-200 rounded-xl p-4 mb-5 flex items-center gap-3">
+        <i data-lucide="alert-circle" class="w-5 h-5 text-red-500 flex-shrink-0"></i>
+        <p class="text-red-700 text-sm font-medium">@TempData["Error"]</p>
+    </div>
+}
+
+<div class="flex gap-6">
+    <!-- Sidebar: Class List -->
+    <div class="w-64 flex-shrink-0">
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden" data-aos="fade-right">
+            <div class="px-5 py-4 border-b border-slate-100">
+                <h3 class="font-bold text-slate-800 text-sm">Lớp của tôi</h3>
+                <p class="text-slate-400 text-xs mt-0.5">@Model.MyClasses.Count lớp</p>
+            </div>
+            <div class="divide-y divide-slate-50">
+                @if (Model.MyClasses.Any())
+                {
+                    @foreach (var cls in Model.MyClasses)
+                    {
+                        var isSelected = Model.SelectedClassId == cls.Id;
+                        <a href="/Teacher/Quizzes?classId=@cls.Id"
+                           class="flex items-start gap-3 px-5 py-3.5 hover:bg-slate-50 transition-colors @(isSelected ? "bg-orange-50 border-l-2 border-fpt-orange" : "")">
+                            <div class="w-8 h-8 rounded-lg @(isSelected ? "bg-fpt-orange" : "bg-slate-100") flex items-center justify-center flex-shrink-0 mt-0.5">
+                                <i data-lucide="users" class="w-4 h-4 @(isSelected ? "text-white" : "text-slate-400")"></i>
+                            </div>
+                            <div class="min-w-0">
+                                <p class="text-sm font-semibold @(isSelected ? "text-fpt-orange" : "text-slate-700") truncate">@cls.Name</p>
+                                <p class="text-xs text-slate-400 truncate">@cls.SubjectName</p>
+                            </div>
+                        </a>
+                    }
+                }
+                else
+                {
+                    <div class="px-5 py-8 text-center">
+                        <i data-lucide="book-open" class="w-8 h-8 text-slate-300 mx-auto mb-2"></i>
+                        <p class="text-slate-400 text-xs">Chưa có lớp nào</p>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="flex-1 min-w-0">
+        @if (Model.SelectedClassId.HasValue)
+        {
+            var selectedClass = Model.MyClasses.FirstOrDefault(c => c.Id == Model.SelectedClassId);
+            <!-- Header with Create button -->
+            <div class="flex items-center justify-between mb-4" data-aos="fade-up">
+                <div>
+                    <h2 class="font-bold text-slate-800">@(selectedClass?.Name ?? "Lớp học")</h2>
+                    <p class="text-slate-400 text-xs">@Model.Quizzes.Count quiz · @(selectedClass?.SubjectName)</p>
+                </div>
+                <button onclick="openCreateModal()"
+                        class="flex items-center gap-2 bg-fpt-orange hover:bg-orange-600 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors shadow-sm">
+                    <i data-lucide="plus" class="w-4 h-4"></i>
+                    Tạo Quiz mới
+                </button>
+            </div>
+
+            <!-- Quiz Cards -->
+            @if (Model.Quizzes.Any())
+            {
+                <div class="grid grid-cols-1 gap-4">
+                    @foreach (var quiz in Model.Quizzes)
+                    {
+                        var statusColor = quiz.Status == 1 ? "amber" : "teal";
+                        var statusText = quiz.Status == 1 ? "Nháp" : "Đã công bố";
+                        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 hover:shadow-md transition-shadow" data-aos="fade-up">
+                            <div class="flex items-start justify-between gap-4">
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex items-center gap-2 flex-wrap mb-1">
+                                        <span class="text-xs font-semibold px-2.5 py-0.5 rounded-full
+                                            @(statusColor == "amber" ? "bg-amber-100 text-amber-700" : "bg-teal-100 text-teal-700")">
+                                            @statusText
+                                        </span>
+                                        <span class="text-xs text-slate-400">@quiz.QuestionCount câu hỏi</span>
+                                    </div>
+                                    <h3 class="font-bold text-slate-800 text-base">@quiz.Title</h3>
+                                    @if (!string.IsNullOrEmpty(quiz.Description))
+                                    {
+                                        <p class="text-slate-500 text-sm mt-1 line-clamp-2">@quiz.Description</p>
+                                    }
+                                    <div class="flex flex-wrap items-center gap-4 mt-2 text-xs text-slate-400">
+                                        <span class="flex items-center gap-1">
+                                            <i data-lucide="clock" class="w-3.5 h-3.5"></i>
+                                            @quiz.DurationMinutes phút
+                                        </span>
+                                        <span class="flex items-center gap-1">
+                                            <i data-lucide="calendar" class="w-3.5 h-3.5"></i>
+                                            @quiz.StartTime.ToString("dd/MM/yyyy HH:mm")
+                                        </span>
+                                        <span class="flex items-center gap-1">
+                                            <i data-lucide="calendar-x" class="w-3.5 h-3.5"></i>
+                                            @quiz.EndTime.ToString("dd/MM/yyyy HH:mm")
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-2 flex-shrink-0">
+                                    @if (quiz.Status == 2)
+                                    {
+                                        <a href="/Teacher/Quizzes/Details?quizId=@quiz.Id&classId=@Model.SelectedClassId"
+                                           class="flex items-center gap-1.5 bg-blue-500 hover:bg-blue-600 text-white text-xs font-semibold px-3 py-2 rounded-lg transition-colors">
+                                            <i data-lucide="bar-chart-2" class="w-3.5 h-3.5"></i>
+                                            Xem điểm
+                                        </a>
+                                    }
+                                    @if (quiz.Status == 1)
+                                    {
+                                        <form method="post" asp-page-handler="Publish" class="inline">
+                                            <input type="hidden" name="quizId" value="@quiz.Id" />
+                                            <input type="hidden" name="classId" value="@Model.SelectedClassId" />
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit"
+                                                    class="flex items-center gap-1.5 bg-teal-500 hover:bg-teal-600 text-white text-xs font-semibold px-3 py-2 rounded-lg transition-colors">
+                                                <i data-lucide="send" class="w-3.5 h-3.5"></i>
+                                                Công bố
+                                            </button>
+                                        </form>
+                                        <form method="post" asp-page-handler="Delete" class="inline"
+                                              onsubmit="return confirmDelete(event, '@quiz.Title')">
+                                            <input type="hidden" name="quizId" value="@quiz.Id" />
+                                            <input type="hidden" name="classId" value="@Model.SelectedClassId" />
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit"
+                                                    class="flex items-center gap-1.5 bg-red-50 hover:bg-red-100 text-red-600 text-xs font-semibold px-3 py-2 rounded-lg transition-colors border border-red-100">
+                                                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                                                Xóa
+                                            </button>
+                                        </form>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+            else
+            {
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-12 text-center" data-aos="fade-up">
+                    <div class="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <i data-lucide="clipboard-list" class="w-8 h-8 text-slate-300"></i>
+                    </div>
+                    <p class="text-slate-600 font-semibold">Chưa có quiz nào</p>
+                    <p class="text-slate-400 text-sm mt-1">Tạo quiz đầu tiên cho lớp này</p>
+                    <button onclick="openCreateModal()"
+                            class="mt-4 inline-flex items-center gap-2 bg-fpt-orange hover:bg-orange-600 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors">
+                        <i data-lucide="plus" class="w-4 h-4"></i>
+                        Tạo Quiz mới
+                    </button>
+                </div>
+            }
+        }
+        else
+        {
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-16 text-center" data-aos="fade-up">
+                <div class="w-20 h-20 bg-orange-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i data-lucide="mouse-pointer-click" class="w-10 h-10 text-fpt-orange"></i>
+                </div>
+                <p class="text-slate-700 font-bold text-lg">Chọn một lớp học</p>
+                <p class="text-slate-400 text-sm mt-1">Chọn lớp ở bên trái để xem và quản lý quiz</p>
+            </div>
+        }
+    </div>
+</div>
+
+<!-- Create Quiz Modal -->
+<div id="createModal" class="fixed inset-0 z-50 hidden">
+    <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" onclick="closeCreateModal()"></div>
+    <div class="absolute inset-0 flex items-start justify-center p-4 overflow-y-auto">
+        <div class="relative bg-white rounded-2xl shadow-xl w-full max-w-2xl my-8">
+            <div class="flex items-center justify-between px-6 py-5 border-b border-slate-100">
+                <div>
+                    <h2 class="font-black text-slate-800 text-lg">Tạo Quiz mới</h2>
+                    <p class="text-slate-400 text-xs mt-0.5">Điền thông tin và thêm câu hỏi</p>
+                </div>
+                <button onclick="closeCreateModal()" class="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 flex items-center justify-center transition-colors">
+                    <i data-lucide="x" class="w-4 h-4 text-slate-500"></i>
+                </button>
+            </div>
+
+            <form method="post" asp-page-handler="Create" id="createQuizForm" onsubmit="return validateQuizForm()">
+                @Html.AntiForgeryToken()
+                <div class="px-6 py-5 space-y-4">
+                    <!-- Class -->
+                    <input type="hidden" name="CreateDto.ClassId" value="@(Model.SelectedClassId ?? 0)" id="modalClassId" />
+
+                    <!-- Tên Quiz -->
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1.5">Tên Quiz <span class="text-red-500">*</span></label>
+                        <input type="text" name="CreateDto.Title" required
+                               class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-fpt-orange/30 focus:border-fpt-orange transition-all"
+                               placeholder="Ví dụ: Kiểm tra giữa kỳ chương 1" />
+                    </div>
+
+                    <!-- Mô tả -->
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1.5">Mô tả</label>
+                        <textarea name="CreateDto.Description" rows="2"
+                                  class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-fpt-orange/30 focus:border-fpt-orange transition-all resize-none"
+                                  placeholder="Mô tả ngắn về quiz..."></textarea>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <!-- Thời gian bắt đầu -->
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-700 mb-1.5">Thời gian bắt đầu <span class="text-red-500">*</span></label>
+                            <input type="datetime-local" name="CreateDto.StartTime" required
+                                   class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-fpt-orange/30 focus:border-fpt-orange transition-all" />
+                        </div>
+                        <!-- Thời gian kết thúc -->
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-700 mb-1.5">Thời gian kết thúc <span class="text-red-500">*</span></label>
+                            <input type="datetime-local" name="CreateDto.EndTime" required
+                                   class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-fpt-orange/30 focus:border-fpt-orange transition-all" />
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <!-- Thời gian làm bài -->
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-700 mb-1.5">Thời gian làm bài (phút) <span class="text-red-500">*</span></label>
+                            <input type="number" name="CreateDto.DurationMinutes" value="30" min="1" max="180" required
+                                   class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-fpt-orange/30 focus:border-fpt-orange transition-all" />
+                        </div>
+                        <!-- Trạng thái -->
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-700 mb-1.5">Trạng thái</label>
+                            <div class="flex items-center gap-3 mt-2.5">
+                                <label class="flex items-center gap-2 cursor-pointer">
+                                    <input type="radio" name="CreateDto.Status" value="1" checked
+                                           class="w-4 h-4 text-fpt-orange focus:ring-fpt-orange" />
+                                    <span class="text-sm text-slate-600">Nháp</span>
+                                </label>
+                                <label class="flex items-center gap-2 cursor-pointer">
+                                    <input type="radio" name="CreateDto.Status" value="2"
+                                           class="w-4 h-4 text-fpt-orange focus:ring-fpt-orange" />
+                                    <span class="text-sm text-slate-600">Công bố ngay</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 gap-4">
+                        <!-- Công bố kết quả -->
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-700 mb-1.5">Tùy chọn</label>
+                            <label class="flex items-center gap-2 mt-2.5 cursor-pointer">
+                                <input type="checkbox" name="CreateDto.IsPublishResult" value="true"
+                                       class="w-4 h-4 rounded text-fpt-orange focus:ring-fpt-orange" />
+                                <span class="text-sm text-slate-600">Công bố kết quả sau khi nộp</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Questions Builder -->
+                    <div>
+                        <div class="flex items-center justify-between mb-2">
+                            <label class="text-sm font-bold text-slate-700">Câu hỏi <span class="text-red-500">*</span></label>
+                            <div class="flex items-center gap-2">
+                                <span class="text-xs font-semibold text-slate-600">Tổng:</span>
+                                <span id="totalPoints" class="text-sm font-bold text-fpt-orange">0</span>
+                                <span class="text-xs text-slate-400">/10</span>
+                                <button type="button" onclick="addQuestion()"
+                                        class="flex items-center gap-1.5 text-xs font-semibold bg-fpt-navy/10 hover:bg-fpt-navy/20 text-fpt-navy px-3 py-1.5 rounded-lg transition-colors">
+                                    <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                                    Thêm câu hỏi
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Error message -->
+                        <div id="totalPointsError" class="hidden mb-3 bg-red-50 border border-red-200 rounded-lg p-3 flex items-start gap-2">
+                            <i data-lucide="alert-circle" class="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5"></i>
+                            <div>
+                                <p class="text-xs font-semibold text-red-700">Tổng điểm không hợp lệ</p>
+                                <p id="errorMessageText" class="text-xs text-red-600 mt-0.5">Tổng điểm các câu hỏi phải bằng 10</p>
+                            </div>
+                        </div>
+
+                        <div id="questionsContainer" class="space-y-4">
+                            <!-- Questions will be added here dynamically -->
+                        </div>
+                        <p id="noQuestionsMsg" class="text-center text-slate-400 text-sm py-4 border-2 border-dashed border-slate-200 rounded-xl">
+                            Nhấn "Thêm câu hỏi" để bắt đầu
+                        </p>
+                    </div>
+                </div>
+
+                <div class="px-6 py-4 border-t border-slate-100 flex items-center justify-end gap-3">
+                    <button type="button" onclick="closeCreateModal()"
+                            class="px-5 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors">
+                        Hủy
+                    </button>
+                    <button type="submit" onclick="return validateQuizForm()"
+                            class="flex items-center gap-2 bg-fpt-orange hover:bg-orange-600 text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-colors">
+                        <i data-lucide="save" class="w-4 h-4"></i>
+                        Lưu Quiz
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+    let questionCount = 0;
+
+    function openCreateModal() {
+        document.getElementById('createModal').classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeCreateModal() {
+        document.getElementById('createModal').classList.add('hidden');
+        document.body.style.overflow = '';
+        // Reset form
+        setTimeout(() => {
+            document.getElementById('createQuizForm').reset();
+            document.getElementById('questionsContainer').innerHTML = '';
+            document.getElementById('noQuestionsMsg').classList.remove('hidden');
+            document.getElementById('totalPointsError').classList.add('hidden');
+            document.getElementById('totalPoints').textContent = '0';
+            document.getElementById('totalPoints').classList.remove('text-red-500');
+            document.getElementById('totalPoints').classList.add('text-fpt-orange');
+            questionCount = 0;
+        }, 100);
+    }
+
+    function addQuestion() {
+        const container = document.getElementById('questionsContainer');
+        const noMsg = document.getElementById('noQuestionsMsg');
+        noMsg.classList.add('hidden');
+
+        const idx = questionCount;
+        questionCount++;
+
+        const optionLetters = ['A', 'B', 'C', 'D'];
+        const optionsHtml = optionLetters.map((letter, oi) => `
+            <div class="flex items-center gap-2">
+                <label class="flex items-center gap-2 cursor-pointer flex-1">
+                    <input type="radio" name="CreateDto.Questions[${idx}].Options[${oi}].IsCorrect_radio"
+                           value="${oi}" onchange="setCorrectAnswer(${idx}, ${oi})"
+                           class="w-4 h-4 text-fpt-orange focus:ring-fpt-orange" />
+                    <span class="text-xs font-bold text-slate-600 w-5">${letter}</span>
+                </label>
+                <input type="text" name="CreateDto.Questions[${idx}].Options[${oi}].OptionText"
+                       placeholder="Đáp án ${letter}" required
+                       class="flex-1 border border-slate-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-fpt-orange/30 focus:border-fpt-orange transition-all" />
+                <input type="hidden" name="CreateDto.Questions[${idx}].Options[${oi}].OrderIndex" value="${oi}" />
+                <input type="hidden" name="CreateDto.Questions[${idx}].Options[${oi}].IsCorrect"
+                       id="isCorrect_${idx}_${oi}" value="false" />
+            </div>
+        `).join('');
+
+        const div = document.createElement('div');
+        div.className = 'border border-slate-200 rounded-xl p-4 bg-slate-50 relative';
+        div.id = `question_${idx}`;
+        div.innerHTML = `
+            <button type="button" onclick="removeQuestion(${idx})"
+                    class="absolute top-3 right-3 w-6 h-6 rounded-full bg-red-100 hover:bg-red-200 flex items-center justify-center transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-red-500"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
+            <div class="flex items-center justify-between gap-2 mb-3">
+                <div class="flex items-center gap-2">
+                    <div class="w-6 h-6 rounded-full bg-fpt-orange text-white text-xs font-bold flex items-center justify-center">${idx + 1}</div>
+                    <span class="text-sm font-semibold text-slate-700">Câu hỏi ${idx + 1}</span>
+                </div>
+                <div class="flex items-center gap-1.5">
+                    <label class="text-xs font-semibold text-slate-600">Điểm:</label>
+                    <input type="number" name="CreateDto.Questions[${idx}].Points" value="1" min="0.5" max="10" step="0.5"
+                           onchange="updateTotalPoints()"
+                           class="w-16 border border-slate-200 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-fpt-orange/30 focus:border-fpt-orange transition-all bg-white" />
+                </div>
+            </div>
+            <input type="hidden" name="CreateDto.Questions[${idx}].OrderIndex" value="${idx}" />
+            <input type="hidden" name="CreateDto.Questions[${idx}].QuestionType" value="SingleChoice" />
+            <div class="mb-3">
+                <textarea name="CreateDto.Questions[${idx}].QuestionText" required rows="2" placeholder="Nhập nội dung câu hỏi..."
+                          class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-fpt-orange/30 focus:border-fpt-orange transition-all resize-none bg-white"></textarea>
+            </div>
+            <div class="space-y-2">
+                <p class="text-xs font-semibold text-slate-600 mb-1">Chọn đáp án đúng (radio) và nhập nội dung:</p>
+                ${optionsHtml}
+            </div>
+        `;
+        container.appendChild(div);
+        updateTotalPoints();
+
+        if (window.lucide) lucide.createIcons();
+    }
+
+    function updateTotalPoints() {
+        const container = document.getElementById('questionsContainer');
+        let total = 0;
+
+        const pointInputs = container.querySelectorAll('input[name*=".Points"]');
+        pointInputs.forEach(input => {
+            total += parseFloat(input.value) || 0;
+        });
+
+        const totalSpan = document.getElementById('totalPoints');
+        totalSpan.textContent = total.toFixed(1);
+
+        const errorDiv = document.getElementById('totalPointsError');
+        const errorText = document.getElementById('errorMessageText');
+
+        if (Math.abs(total - 10) < 0.01) {
+            // Total is correct
+            totalSpan.classList.remove('text-red-500');
+            totalSpan.classList.add('text-teal-600');
+            errorDiv.classList.add('hidden');
+        } else {
+            // Total is wrong
+            totalSpan.classList.remove('text-teal-600');
+            totalSpan.classList.add('text-red-500');
+
+            const diff = total - 10;
+            if (diff > 0) {
+                errorText.textContent = `Tổng điểm là ${total.toFixed(1)} - Thừa ${diff.toFixed(1)} point. Cần giảm để bằng 10.`;
+            } else {
+                errorText.textContent = `Tổng điểm là ${total.toFixed(1)} - Thiếu ${Math.abs(diff).toFixed(1)} point. Cần tăng để bằng 10.`;
+            }
+            errorDiv.classList.remove('hidden');
+        }
+    }
+
+    function removeQuestion(idx) {
+        const el = document.getElementById(`question_${idx}`);
+        if (el) el.remove();
+
+        const container = document.getElementById('questionsContainer');
+        if (container.children.length === 0) {
+            document.getElementById('noQuestionsMsg').classList.remove('hidden');
+            updateTotalPoints();
+            return;
+        }
+
+        // CRITICAL: Reindex all remaining questions for proper model binding
+        const questions = Array.from(container.children);
+        questions.forEach((questionDiv, newIdx) => {
+            // Update question number display
+            const numBadge = questionDiv.querySelector('.w-6.h-6.rounded-full');
+            if (numBadge) numBadge.textContent = newIdx + 1;
+
+            const labelSpan = questionDiv.querySelector('span.text-sm.font-semibold');
+            if (labelSpan) labelSpan.textContent = `Câu hỏi ${newIdx + 1}`;
+
+            // Reindex ALL inputs with proper names
+            const inputs = questionDiv.querySelectorAll('input, textarea');
+            inputs.forEach(input => {
+                const name = input.getAttribute('name');
+                if (!name) return;
+
+                // Replace old index with new index
+                const newName = name.replace(/Questions\[\d+\]/, `Questions[${newIdx}]`);
+                input.setAttribute('name', newName);
+
+                // Update IDs for hidden IsCorrect inputs
+                if (input.id && input.id.startsWith('isCorrect_')) {
+                    const parts = input.id.split('_');
+                    input.id = `isCorrect_${newIdx}_${parts[2]}`;
+                }
+
+                // Update radio onchange handler
+                if (input.type === 'radio' && input.onchange) {
+                    const optIdx = parseInt(input.value);
+                    input.onchange = () => setCorrectAnswer(newIdx, optIdx);
+                }
+            });
+
+            // Update remove button onclick
+            const removeBtn = questionDiv.querySelector('button[onclick^="removeQuestion"]');
+            if (removeBtn) removeBtn.onclick = () => removeQuestion(newIdx);
+
+            // Update div ID
+            questionDiv.id = `question_${newIdx}`;
+        });
+
+        updateTotalPoints();
+    }
+
+    function setCorrectAnswer(qIdx, correctOi) {
+        for (let oi = 0; oi < 4; oi++) {
+            const el = document.getElementById(`isCorrect_${qIdx}_${oi}`);
+            if (el) el.value = (oi === correctOi) ? 'true' : 'false';
+        }
+    }
+
+    function validateQuizForm() {
+        const classId = document.getElementById('modalClassId')?.value ?? 0;
+        const container = document.getElementById('questionsContainer');
+        const questionCount = container.children.length;
+
+        if (!classId || classId === "0") {
+            Swal.fire({
+                icon: 'error',
+                title: 'Lỗi',
+                text: 'Vui lòng chọn lớp học trước!',
+                confirmButtonColor: '#FF6B35'
+            });
+            return false;
+        }
+
+        if (questionCount === 0) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Thiếu câu hỏi',
+                text: 'Quiz phải có ít nhất 1 câu hỏi!',
+                confirmButtonColor: '#FF6B35'
+            });
+            return false;
+        }
+
+        // Calculate total points
+        let totalPoints = 0;
+        const pointInputs = container.querySelectorAll('input[name*=".Points"]');
+        pointInputs.forEach(input => {
+            totalPoints += parseFloat(input.value) || 0;
+        });
+
+        // Check if total points is correct (show inline error, don't block with alert)
+        if (Math.abs(totalPoints - 10) > 0.01) {
+            // Scroll to error message
+            document.getElementById('totalPointsError').scrollIntoView({ behavior: 'smooth', block: 'center' });
+            return false;
+        }
+
+        // Validate each question
+        for (let i = 0; i < questionCount; i++) {
+            const questionDiv = container.children[i];
+            const questionText = questionDiv.querySelector('textarea[name*="QuestionText"]');
+            const options = questionDiv.querySelectorAll('input[name*="OptionText"]');
+
+            if (!questionText || !questionText.value.trim()) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Câu hỏi trống',
+                    text: `Câu hỏi ${i + 1} chưa có nội dung. Vui lòng điền nội dung!`,
+                    confirmButtonColor: '#FF6B35'
+                });
+                return false;
+            }
+
+            if (options.length < 4 || Array.from(options).some(o => !o.value.trim())) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Chưa đủ đáp án',
+                    text: `Câu hỏi ${i + 1} phải có 4 đáp án và không được trống!`,
+                    confirmButtonColor: '#FF6B35'
+                });
+                return false;
+            }
+
+            // Validate has correct answer
+            let hasCorrectAnswer = false;
+            for (let j = 0; j < 4; j++) {
+                const el = document.getElementById(`isCorrect_${i}_${j}`);
+                if (el && el.value === 'true') {
+                    hasCorrectAnswer = true;
+                    break;
+                }
+            }
+            if (!hasCorrectAnswer) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Chưa chọn đáp án đúng',
+                    text: `Câu hỏi ${i + 1} chưa có đáp án đúng. Vui lòng chọn đáp án!`,
+                    confirmButtonColor: '#FF6B35'
+                });
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    async function confirmDelete(event, title) {
+        event.preventDefault();
+        const form = event.target;
+        const result = await Swal.fire({
+            title: 'Xác nhận xóa?',
+            text: `Bạn chắc chắn muốn xóa quiz "${title}"?`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#ef4444',
+            cancelButtonColor: '#94a3b8',
+            confirmButtonText: 'Xóa',
+            cancelButtonText: 'Hủy'
+        });
+        if (result.isConfirmed) form.submit();
+        return false;
+    }
+
+    // SignalR: join quiz hub class group
+    (async function() {
+        try {
+            const classId = @(Model.SelectedClassId ?? 0);
+            if (!classId) return;
+
+            const conn = signalRManager.get('quiz');
+            if (conn) {
+                await conn.invoke('JoinGroup', `class_${classId}`);
+                console.log(`Teacher joined quiz group: class_${classId}`);
+
+                // Listen for quiz events (if needed for real-time updates)
+                conn.on('QuizCreated', data => {
+                    if (data.classId === classId) {
+                        showToast('Quiz đã được tạo!', 'success');
+                    }
+                });
+
+                conn.on('QuizDeleted', data => {
+                    if (data.classId === classId) {
+                        showToast('Quiz đã bị xóa!', 'warning');
+                        setTimeout(() => location.reload(), 1000);
+                    }
+                });
+            }
+        } catch(e) {
+            console.warn('SignalR quiz error:', e);
+        }
+    })();
+</script>
+}

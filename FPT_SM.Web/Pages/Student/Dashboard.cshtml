@@ -1,0 +1,306 @@
+@page
+@model FPT_SM.Web.Pages.Student.DashboardModel
+@{
+    Layout = "_StudentLayout";
+    ViewData["Title"] = "Dashboard - Sinh viên";
+    var data = Model.DashboardData;
+    var rollNumber = ViewData["RollNumber"]?.ToString() ?? "";
+}
+
+<!-- Welcome Banner -->
+<div class="bg-gradient-to-r from-fpt-navy via-blue-700 to-fpt-orange rounded-2xl p-6 mb-8 relative overflow-hidden" data-aos="fade-down">
+    <div class="absolute top-0 right-0 w-48 h-48 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/4"></div>
+    <div class="absolute bottom-0 right-20 w-32 h-32 bg-fpt-orange/20 rounded-full translate-y-1/2"></div>
+    <div class="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+            <p class="text-white/70 text-sm mb-1">Xin chào 👋</p>
+            <h2 class="text-white font-black text-2xl">@(Model.CurrentFullName ?? "Sinh viên")</h2>
+            <div class="flex flex-wrap items-center gap-2 mt-2">
+                @if (!string.IsNullOrEmpty(rollNumber))
+                {
+                    <span class="bg-white/20 text-white text-xs font-bold px-3 py-1 rounded-full">
+                        @rollNumber
+                    </span>
+                }
+                @if (data?.CurrentSemester != null)
+                {
+                    <span class="bg-fpt-orange/80 text-white text-xs font-semibold px-3 py-1 rounded-full">
+                        @data.CurrentSemester.Name
+                    </span>
+                }
+            </div>
+        </div>
+        <div class="flex flex-col items-start sm:items-end gap-1">
+            <p class="text-white/60 text-xs">Số dư ví</p>
+            <p class="text-white font-black text-3xl">@(data?.WalletBalance.ToString("N0") ?? "0") ₫</p>
+            <a href="/Payment/Wallet" class="flex items-center gap-1.5 bg-white/20 hover:bg-white/30 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-all mt-1">
+                <i data-lucide="plus" class="w-3 h-3"></i>
+                Nạp tiền
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Stats Row -->
+<div class="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-8">
+    <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 hover:shadow-md transition-shadow" data-aos="fade-up" data-aos-delay="0">
+        <div class="w-10 h-10 bg-fpt-navy/10 rounded-xl flex items-center justify-center mb-3">
+            <i data-lucide="book-open" class="w-5 h-5 text-fpt-navy"></i>
+        </div>
+        <p class="text-slate-500 text-xs font-medium">Môn đang học</p>
+        <p class="text-2xl font-black text-fpt-navy mt-1">@(data?.CurrentSemesterSubjects ?? 0)</p>
+        <p class="text-xs text-slate-400 mt-0.5">Kỳ này</p>
+    </div>
+
+    <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 hover:shadow-md transition-shadow" data-aos="fade-up" data-aos-delay="60">
+        <div class="w-10 h-10 bg-teal-100 rounded-xl flex items-center justify-center mb-3">
+            <i data-lucide="trending-up" class="w-5 h-5 text-teal-500"></i>
+        </div>
+        <p class="text-slate-500 text-xs font-medium">GPA trung bình</p>
+        <p class="text-2xl font-black @(data?.AverageGPA >= 5 ? "text-teal-600" : "text-red-500") mt-1">
+            @(data?.AverageGPA.ToString("F1") ?? "—")
+        </p>
+        <p class="text-xs @(data?.AverageGPA >= 5 ? "text-teal-400" : "text-red-400") mt-0.5">
+            @(data?.AverageGPA >= 7 ? "Xuất sắc" : data?.AverageGPA >= 5 ? "Đạt" : "Cần cải thiện")
+        </p>
+    </div>
+
+    <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 hover:shadow-md transition-shadow" data-aos="fade-up" data-aos-delay="120">
+        <div class="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center mb-3">
+            <i data-lucide="user-x" class="w-5 h-5 text-red-400"></i>
+        </div>
+        <p class="text-slate-500 text-xs font-medium">Tổng vắng mặt</p>
+        <p class="text-2xl font-black @(data?.TotalAbsences >= 5 ? "text-red-600" : data?.TotalAbsences >= 3 ? "text-amber-500" : "text-slate-700") mt-1">
+            @(data?.TotalAbsences ?? 0)
+        </p>
+        <p class="text-xs text-slate-400 mt-0.5">buổi học</p>
+    </div>
+
+    <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 hover:shadow-md transition-shadow" data-aos="fade-up" data-aos-delay="180">
+        <div class="w-10 h-10 bg-sky-100 rounded-xl flex items-center justify-center mb-3">
+            <i data-lucide="clipboard-list" class="w-5 h-5 text-sky-500"></i>
+        </div>
+        <p class="text-slate-500 text-xs font-medium">Quiz đang mở</p>
+        <p class="text-2xl font-black text-sky-600 mt-1">@(data?.ActiveQuizzes ?? 0)</p>
+        <p class="text-xs text-slate-400 mt-0.5">Cần hoàn thành</p>
+    </div>
+</div>
+
+<!-- Alerts -->
+@if (data?.NewNotifications > 0)
+{
+    <div class="bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-6 flex items-center gap-3" data-aos="fade-up">
+        <div class="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center flex-shrink-0">
+            <i data-lucide="bell" class="w-5 h-5 text-amber-500"></i>
+        </div>
+        <div class="flex-1">
+            <p class="text-amber-800 font-semibold text-sm">
+                Bạn có <span class="font-black">@data.NewNotifications</span> phân tích AI chưa đọc
+            </p>
+            <p class="text-amber-600 text-xs mt-0.5">Xem ngay để cải thiện kết quả học tập của bạn</p>
+        </div>
+        <a href="/Student/Analysis" class="flex items-center gap-1.5 bg-amber-500 hover:bg-amber-600 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors flex-shrink-0">
+            <i data-lucide="eye" class="w-3 h-3"></i>
+            Xem ngay
+        </a>
+    </div>
+}
+
+@if (data?.TotalAbsences >= 3)
+{
+    <div class="bg-red-50 border border-red-200 rounded-2xl p-4 mb-6 flex items-center gap-3" data-aos="fade-up">
+        <div class="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center flex-shrink-0">
+            <i data-lucide="alert-triangle" class="w-5 h-5 text-red-500"></i>
+        </div>
+        <div>
+            <p class="text-red-800 font-semibold text-sm">Cảnh báo vắng mặt</p>
+            <p class="text-red-600 text-xs mt-0.5">
+                Bạn đã vắng <strong>@data.TotalAbsences</strong> buổi học. @(data.TotalAbsences >= 5 ? "Bạn có thể bị cấm thi!" : "Hãy chú ý đi học đầy đủ.")
+            </p>
+        </div>
+    </div>
+}
+
+<!-- Main Content -->
+<div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+    <!-- Current Enrollments -->
+    <div class="xl:col-span-2 bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden" data-aos="fade-up" data-aos-delay="100">
+        <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+            <div>
+                <h3 class="font-bold text-slate-800">Môn đang học</h3>
+                <p class="text-slate-400 text-xs mt-0.5">Danh sách môn học kỳ này</p>
+            </div>
+            <a href="/Student/Enrollments" class="text-xs text-fpt-orange hover:underline font-medium">Xem tất cả</a>
+        </div>
+
+        @if (data?.CurrentEnrollments?.Any() == true)
+        {
+            <div class="divide-y divide-slate-50">
+                @foreach (var enroll in data.CurrentEnrollments.Take(6))
+                {
+                    var absencePercent = 0;
+                    var attendPercent = 100 - absencePercent;
+                    var gpa = enroll.Grade?.GPA;
+                    var isPassed = enroll.Grade?.IsPassed ?? false;
+                    var resultColor = gpa.HasValue ? (isPassed ? "teal" : "red") : "slate";
+                    var absenceWarn = enroll.AbsentCount >= 5 ? "red" : enroll.AbsentCount >= 3 ? "amber" : "teal";
+
+                    <div class="px-6 py-4 hover:bg-slate-50 transition-colors">
+                        <div class="flex items-start justify-between gap-4">
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center gap-2 flex-wrap">
+                                    <p class="text-sm font-bold text-slate-700">@enroll.SubjectName</p>
+                                    <span class="text-xs font-mono bg-fpt-navy/10 text-fpt-navy px-2 py-0.5 rounded-md">@enroll.SubjectCode</span>
+                                </div>
+                                <p class="text-xs text-slate-400 mt-0.5">@enroll.ClassName · @enroll.DayName @enroll.StartTime.ToString(@"hh\:mm")-@enroll.EndTime.ToString(@"hh\:mm")</p>
+                                <p class="text-xs text-slate-400">GV: @enroll.TeacherName</p>
+
+                                <!-- Attendance progress bar -->
+                                <div class="mt-2 flex items-center gap-2">
+                                    <div class="flex-1 h-1.5 bg-slate-100 rounded-full">
+                                        <div class="h-1.5 rounded-full @(absenceWarn == "red" ? "bg-red-400" : absenceWarn == "amber" ? "bg-amber-400" : "bg-teal-400")"
+                                             style="width: @(Math.Max(0, 100 - enroll.AbsentCount * 10))%"></div>
+                                    </div>
+                                    <span class="text-xs font-medium @(absenceWarn == "red" ? "text-red-500" : absenceWarn == "amber" ? "text-amber-500" : "text-teal-500") flex-shrink-0">
+                                        @enroll.AbsentCount buổi vắng
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="flex-shrink-0 text-right">
+                                @if (gpa.HasValue)
+                                {
+                                    <div class="w-12 h-12 rounded-xl @(resultColor == "teal" ? "bg-teal-100" : resultColor == "red" ? "bg-red-100" : "bg-slate-100") flex flex-col items-center justify-center">
+                                        <span class="text-lg font-black @(resultColor == "teal" ? "text-teal-600" : resultColor == "red" ? "text-red-500" : "text-slate-400")">
+                                            @gpa.Value.ToString("F1")
+                                        </span>
+                                    </div>
+                                    <p class="text-xs font-semibold @(resultColor == "teal" ? "text-teal-500" : "text-red-500") mt-1">
+                                        @enroll.Grade!.ResultText
+                                    </p>
+                                }
+                                else
+                                {
+                                    <div class="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center">
+                                        <i data-lucide="minus" class="w-4 h-4 text-slate-400"></i>
+                                    </div>
+                                    <p class="text-xs text-slate-400 mt-1">Chưa có</p>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+        else
+        {
+            <div class="flex flex-col items-center justify-center py-16 text-center">
+                <div class="w-14 h-14 bg-slate-50 rounded-full flex items-center justify-center mb-3">
+                    <i data-lucide="book-open" class="w-7 h-7 text-slate-300"></i>
+                </div>
+                <p class="text-slate-500 font-medium">Chưa đăng ký môn nào</p>
+                <a href="/Student/Enrollments" class="mt-3 text-xs text-fpt-orange hover:underline font-medium">Đăng ký môn học ngay →</a>
+            </div>
+        }
+    </div>
+
+    <!-- Upcoming Quizzes -->
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden" data-aos="fade-up" data-aos-delay="200">
+        <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+            <div>
+                <h3 class="font-bold text-slate-800">Quiz sắp diễn ra</h3>
+                <p class="text-slate-400 text-xs mt-0.5">Bài kiểm tra chưa làm</p>
+            </div>
+            @if (data?.ActiveQuizzes > 0)
+            {
+                <span class="w-6 h-6 bg-sky-500 text-white text-xs rounded-full flex items-center justify-center font-bold">
+                    @data.ActiveQuizzes
+                </span>
+            }
+        </div>
+
+        <div class="divide-y divide-slate-50">
+            @if (data?.UpcomingQuizzes?.Any() == true)
+            {
+                @foreach (var quiz in data.UpcomingQuizzes.Take(6))
+                {
+                    var quizColor = quiz.IsActive ? "teal" : quiz.IsUpcoming ? "sky" : "slate";
+                    <div class="px-6 py-4 hover:bg-slate-50 transition-colors">
+                        <div class="flex items-start justify-between gap-3">
+                            <div class="flex-1 min-w-0">
+                                <p class="text-sm font-semibold text-slate-700 truncate">@quiz.Title</p>
+                                <p class="text-xs text-slate-400 mt-0.5 truncate">@quiz.SubjectName</p>
+                                <p class="text-xs text-slate-400">@quiz.StartTime.ToString("dd/MM HH:mm") - @quiz.EndTime.ToString("HH:mm")</p>
+                                <p class="text-xs text-slate-400">@quiz.DurationMinutes phút · @quiz.QuestionCount câu</p>
+                            </div>
+                            <div class="flex-shrink-0">
+                                @if (quiz.HasSubmitted)
+                                {
+                                    <span class="text-xs font-semibold bg-teal-100 text-teal-700 px-2.5 py-1 rounded-full">Đã làm</span>
+                                }
+                                else if (quiz.IsActive)
+                                {
+                                    <a href="/Student/Quiz/@quiz.Id"
+                                       class="text-xs font-semibold bg-teal-500 hover:bg-teal-600 text-white px-2.5 py-1 rounded-full transition-colors block text-center">
+                                        Làm ngay
+                                    </a>
+                                }
+                                else if (quiz.IsUpcoming)
+                                {
+                                    <span class="text-xs font-semibold bg-sky-100 text-sky-700 px-2.5 py-1 rounded-full">Sắp mở</span>
+                                }
+                                else
+                                {
+                                    <span class="text-xs font-semibold bg-slate-100 text-slate-500 px-2.5 py-1 rounded-full">Đã hết</span>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                }
+            }
+            else
+            {
+                <div class="flex flex-col items-center justify-center py-12 text-center">
+                    <div class="w-12 h-12 bg-teal-50 rounded-full flex items-center justify-center mb-3">
+                        <i data-lucide="check-circle" class="w-6 h-6 text-teal-400"></i>
+                    </div>
+                    <p class="text-slate-500 font-medium text-sm">Không có quiz nào</p>
+                    <p class="text-slate-400 text-xs mt-1">Không có bài kiểm tra sắp tới</p>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    // SignalR - Listen for real-time Admin updates
+    (async function () {
+        try {
+            const conn = await signalRManager.connect('notification', '/hubs/notification');
+            await conn.invoke('JoinGroup', 'student_all');
+
+            // Listen for user updates from Admin
+            conn.on('UserUpdated', async function (data) {
+                showToast('Cập nhật người dùng', `Người dùng: ${data.action}`, 'info');
+                await new Promise(r => setTimeout(r, 1000));
+                window.location.reload();
+            });
+
+            // Listen for semester updates from Admin
+            conn.on('SemesterUpdated', async function (data) {
+                showToast('Cập nhật học kỳ', `Hành động: ${data.action}`, 'info');
+                await new Promise(r => setTimeout(r, 1000));
+                window.location.reload();
+            });
+
+            // Listen for subject updates from Admin
+            conn.on('SubjectUpdated', async function (data) {
+                showToast('Cập nhật môn học', `Môn: ${data.name} - ${data.action}`, 'info');
+                await new Promise(r => setTimeout(r, 1000));
+                window.location.reload();
+            });
+
+        } catch (e) { console.warn('SignalR not connected', e); }
+    })();
+</script>
+}

@@ -1,0 +1,261 @@
+@page
+@model FPT_SM.Web.Pages.Student.Attendance.IndexModel
+@{
+    Layout = "_StudentLayout";
+    ViewData["Title"] = "Điểm danh";
+    var summaries = Model.AttendanceSummaries;
+    int totalSessions = 20;
+}
+
+<!-- Page Header -->
+<div class="bg-gradient-to-r from-fpt-navy to-blue-800 rounded-2xl p-6 mb-6 flex items-center justify-between" data-aos="fade-down">
+    <div>
+        <h2 class="text-white font-black text-2xl">Điểm danh</h2>
+        <p class="text-white/60 text-sm mt-1">Theo dõi tình hình chuyên cần của bạn</p>
+    </div>
+    <div class="hidden sm:flex items-center gap-3">
+        <div class="text-right">
+            <p class="text-white/60 text-xs">Số môn đang học</p>
+            <p class="text-white font-black text-3xl">@summaries.Count</p>
+        </div>
+        <div class="w-14 h-14 bg-white/10 rounded-2xl flex items-center justify-center">
+            <i data-lucide="clipboard-check" class="w-7 h-7 text-white"></i>
+        </div>
+    </div>
+</div>
+
+<!-- Summary Stats -->
+@if (summaries.Any())
+{
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100" data-aos="fade-up" data-aos-delay="0">
+            <div class="w-9 h-9 bg-teal-100 rounded-xl flex items-center justify-center mb-2">
+                <i data-lucide="check-circle" class="w-5 h-5 text-teal-600"></i>
+            </div>
+            <p class="text-2xl font-black text-teal-600">@summaries.Sum(s => s.PresentCount)</p>
+            <p class="text-xs text-slate-500 mt-0.5">Tổng buổi có mặt</p>
+        </div>
+        <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100" data-aos="fade-up" data-aos-delay="60">
+            <div class="w-9 h-9 bg-red-100 rounded-xl flex items-center justify-center mb-2">
+                <i data-lucide="x-circle" class="w-5 h-5 text-red-500"></i>
+            </div>
+            <p class="text-2xl font-black text-red-500">@summaries.Sum(s => s.AbsentCount)</p>
+            <p class="text-xs text-slate-500 mt-0.5">Tổng buổi vắng</p>
+        </div>
+        <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100" data-aos="fade-up" data-aos-delay="120">
+            <div class="w-9 h-9 bg-amber-100 rounded-xl flex items-center justify-center mb-2">
+                <i data-lucide="clock" class="w-5 h-5 text-amber-500"></i>
+            </div>
+            <p class="text-2xl font-black text-amber-500">@summaries.Sum(s => s.LateCount)</p>
+            <p class="text-xs text-slate-500 mt-0.5">Tổng buổi đi trễ</p>
+        </div>
+        <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100" data-aos="fade-up" data-aos-delay="180">
+            <div class="w-9 h-9 bg-red-100 rounded-xl flex items-center justify-center mb-2">
+                <i data-lucide="alert-triangle" class="w-5 h-5 text-red-600"></i>
+            </div>
+            <p class="text-2xl font-black text-red-600">@summaries.Count(s => s.IsFailedByAbsence)</p>
+            <p class="text-xs text-slate-500 mt-0.5">Môn rớt do vắng</p>
+        </div>
+    </div>
+}
+
+<!-- Attendance Cards Per Subject -->
+@if (summaries.Any())
+{
+    @foreach (var summary in summaries)
+    {
+        var attendancePercent = (int)Math.Round(summary.AttendanceRate);
+        var barColor = summary.IsFailedByAbsence ? "bg-red-500"
+                     : summary.AbsentCount >= 4  ? "bg-amber-500"
+                     : "bg-teal-500";
+
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden mb-5" data-aos="fade-up">
+            <!-- Card Header -->
+            <div class="px-6 py-4 border-b border-slate-100">
+                <div class="flex items-start justify-between gap-4">
+                    <div class="flex items-start gap-3">
+                        <div class="w-10 h-10 bg-fpt-navy/10 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5">
+                            <i data-lucide="book-open" class="w-5 h-5 text-fpt-navy"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-slate-800 text-base">@summary.SubjectName</h3>
+                            <p class="text-sm text-slate-400 mt-0.5">
+                                <span class="font-mono bg-slate-100 px-1.5 py-0.5 rounded text-xs">@summary.SubjectCode</span>
+                            </p>
+                        </div>
+                    </div>
+                    <div class="flex-shrink-0 flex flex-col items-end gap-2">
+                        @if (summary.IsFailedByAbsence)
+                        {
+                            <span class="inline-flex items-center gap-1.5 text-xs font-bold text-red-600 bg-red-100 px-3 py-1.5 rounded-full">
+                                <i data-lucide="x-circle" class="w-3.5 h-3.5"></i>
+                                Rớt điểm danh
+                            </span>
+                        }
+                        else if (summary.AbsentCount >= 4)
+                        {
+                            <span class="inline-flex items-center gap-1.5 text-xs font-bold text-amber-600 bg-amber-100 px-3 py-1.5 rounded-full animate-pulse">
+                                <i data-lucide="alert-triangle" class="w-3.5 h-3.5"></i>
+                                Cảnh báo!
+                            </span>
+                        }
+                        else
+                        {
+                            <span class="inline-flex items-center gap-1.5 text-xs font-bold text-teal-600 bg-teal-100 px-3 py-1.5 rounded-full">
+                                <i data-lucide="check" class="w-3.5 h-3.5"></i>
+                                Đạt yêu cầu
+                            </span>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <div class="px-6 py-4">
+                <!-- Alert Messages -->
+                @if (summary.IsFailedByAbsence)
+                {
+                    <div class="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3">
+                        <i data-lucide="alert-octagon" class="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5"></i>
+                        <div>
+                            <p class="text-sm font-bold text-red-700">Đã rớt môn do vắng quá số buổi cho phép</p>
+                            <p class="text-xs text-red-500 mt-0.5">Bạn đã vắng @summary.AbsentCount buổi (ngưỡng tối đa là 4 buổi)</p>
+                        </div>
+                    </div>
+                }
+                else if (summary.AbsentCount >= 4)
+                {
+                    <div class="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-3">
+                        <i data-lucide="alert-triangle" class="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5"></i>
+                        <div>
+                            <p class="text-sm font-bold text-amber-700">Cảnh báo: Sắp đủ 5 buổi vắng!</p>
+                            <p class="text-xs text-amber-600 mt-0.5">Bạn đã vắng @summary.AbsentCount buổi. Còn @(5 - summary.AbsentCount) buổi nữa sẽ bị rớt môn.</p>
+                        </div>
+                    </div>
+                }
+
+                <!-- Attendance Progress -->
+                <div class="mb-4">
+                    <div class="flex items-center justify-between mb-2">
+                        <p class="text-sm text-slate-600 font-medium">Tỉ lệ chuyên cần</p>
+                        <span class="text-sm font-bold @(attendancePercent >= 80 ? "text-teal-600" : attendancePercent >= 60 ? "text-amber-600" : "text-red-500")">
+                            @attendancePercent%
+                        </span>
+                    </div>
+                    <div class="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
+                        <div class="h-3 @barColor rounded-full transition-all duration-700" style="width: @attendancePercent%"></div>
+                    </div>
+                    <div class="flex justify-between text-xs text-slate-400 mt-1">
+                        <span>0 buổi</span>
+                        <span>@summary.TotalSessions / @totalSessions buổi đã học</span>
+                    </div>
+                </div>
+
+                <!-- Status Badges Row -->
+                <div class="flex items-center gap-3 flex-wrap mb-4">
+                    <div class="flex items-center gap-1.5 bg-teal-50 border border-teal-100 px-3 py-1.5 rounded-xl">
+                        <span class="w-2 h-2 rounded-full bg-teal-500"></span>
+                        <span class="text-sm font-semibold text-teal-700">@summary.PresentCount Có mặt</span>
+                    </div>
+                    <div class="flex items-center gap-1.5 bg-red-50 border border-red-100 px-3 py-1.5 rounded-xl">
+                        <span class="w-2 h-2 rounded-full bg-red-500"></span>
+                        <span class="text-sm font-semibold text-red-600">@summary.AbsentCount Vắng</span>
+                    </div>
+                    <div class="flex items-center gap-1.5 bg-amber-50 border border-amber-100 px-3 py-1.5 rounded-xl">
+                        <span class="w-2 h-2 rounded-full bg-amber-400"></span>
+                        <span class="text-sm font-semibold text-amber-600">@summary.LateCount Đi trễ</span>
+                    </div>
+                    @if (summary.ExcusedCount > 0)
+                    {
+                        <div class="flex items-center gap-1.5 bg-sky-50 border border-sky-100 px-3 py-1.5 rounded-xl">
+                            <span class="w-2 h-2 rounded-full bg-sky-400"></span>
+                            <span class="text-sm font-semibold text-sky-600">@summary.ExcusedCount Có phép</span>
+                        </div>
+                    }
+                </div>
+
+                <!-- Detailed Session Table (collapsible) -->
+                @if (summary.Sessions.Any())
+                {
+                    <details class="group">
+                        <summary class="flex items-center gap-2 cursor-pointer text-sm font-medium text-fpt-navy hover:text-blue-700 transition-colors select-none list-none">
+                            <i data-lucide="chevron-right" class="w-4 h-4 transition-transform group-open:rotate-90"></i>
+                            Xem chi tiết buổi học (@summary.Sessions.Count buổi)
+                        </summary>
+                        <div class="mt-3 overflow-x-auto">
+                            <table class="w-full text-sm">
+                                <thead>
+                                    <tr class="bg-slate-50 text-left">
+                                        <th class="px-4 py-2.5 text-xs font-semibold text-slate-500 uppercase">Buổi</th>
+                                        <th class="px-4 py-2.5 text-xs font-semibold text-slate-500 uppercase">Ngày</th>
+                                        <th class="px-4 py-2.5 text-xs font-semibold text-slate-500 uppercase">Trạng thái</th>
+                                        <th class="px-4 py-2.5 text-xs font-semibold text-slate-500 uppercase">Ghi chú</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-50">
+                                    @foreach (var session in summary.Sessions.OrderBy(s => s.SessionNumber))
+                                    {
+                                        <tr class="hover:bg-slate-50 transition-colors">
+                                            <td class="px-4 py-2.5 text-slate-500 font-medium">Buổi @session.SessionNumber</td>
+                                            <td class="px-4 py-2.5 text-slate-600">@session.SlotDate.ToString("dd/MM/yyyy")</td>
+                                            <td class="px-4 py-2.5">
+                                                <span class="inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full
+                                                    @(session.StatusColor == "teal" ? "bg-teal-100 text-teal-700" :
+                                                      session.StatusColor == "red"  ? "bg-red-100 text-red-600" :
+                                                      session.StatusColor == "amber"? "bg-amber-100 text-amber-600" :
+                                                      session.StatusColor == "sky"  ? "bg-sky-100 text-sky-600" : "bg-slate-100 text-slate-500")">
+                                                    @session.StatusVN
+                                                </span>
+                                            </td>
+                                            <td class="px-4 py-2.5 text-slate-400 text-xs">@(session.Note ?? "—")</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </details>
+                }
+            </div>
+        </div>
+    }
+}
+else
+{
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center justify-center py-24 text-center" data-aos="fade-up">
+        <div class="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mb-5">
+            <i data-lucide="clipboard-check" class="w-10 h-10 text-slate-300"></i>
+        </div>
+        <h3 class="text-slate-500 font-semibold text-lg">Chưa có dữ liệu điểm danh</h3>
+        <p class="text-slate-400 text-sm mt-2 max-w-sm">Bạn chưa đăng ký môn học nào hoặc chưa có buổi học nào được ghi nhận</p>
+        <a href="/Student/Enrollment" class="mt-5 inline-flex items-center gap-2 bg-fpt-navy text-white px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-blue-900 transition-colors">
+            <i data-lucide="plus" class="w-4 h-4"></i>
+            Đăng ký môn học
+        </a>
+    </div>
+}
+
+@section Scripts {
+<script>
+    // SignalR: listen for attendance updates on own enrollments
+    (async function() {
+        try {
+            const userId = @(Model.CurrentUserId ?? 0);
+            const attendanceConn = await signalRManager.connect('attendance', '/hubs/attendance');
+            await attendanceConn.invoke('JoinGroup', `student_${userId}`);
+            attendanceConn.on('StudentFailedByAbsence', data => {
+                if (data.studentId === userId) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Rớt điểm danh!',
+                        html: `<p>${data.message}</p>`,
+                        confirmButtonColor: '#002E5D',
+                        confirmButtonText: 'Xem chi tiết'
+                    }).then(() => location.reload());
+                }
+            });
+            attendanceConn.on('AttendanceUpdated', data => {
+                showToast('Điểm danh của bạn vừa được cập nhật', 'info');
+            });
+        } catch(e) { console.warn('SignalR attendance error:', e); }
+    })();
+</script>
+}

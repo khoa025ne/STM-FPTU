@@ -1,0 +1,458 @@
+@page
+@model FPT_SM.Web.Pages.Admin.Subjects.IndexModel
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Quản lý Môn học";
+}
+
+@if (TempData["Success"] != null)
+{
+    <div id="tempSuccessMsg" class="hidden">@TempData["Success"]</div>
+}
+@if (TempData["Error"] != null)
+{
+    <div id="tempErrorMsg" class="hidden">@TempData["Error"]</div>
+}
+
+<!-- Page Header -->
+<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6" data-aos="fade-down">
+    <div>
+        <h2 class="text-2xl font-black text-fpt-navy">Quản lý Môn học</h2>
+        <p class="text-slate-500 text-sm mt-1">Quản lý danh sách môn học trong hệ thống</p>
+    </div>
+    <a href="/Admin/Subjects/Create"
+       class="inline-flex items-center gap-2 bg-fpt-orange hover:bg-orange-500 text-white font-semibold px-5 py-2.5 rounded-xl text-sm transition-all hover:shadow-lg">
+        <i data-lucide="plus" class="w-4 h-4"></i>
+        Thêm môn học
+    </a>
+</div>
+
+<!-- Stats -->
+<div class="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-5" data-aos="fade-up" data-aos-delay="50">
+    <div class="bg-gradient-to-br from-fpt-navy to-blue-800 rounded-xl p-4 text-white">
+        <p class="text-xs text-blue-200 mb-1">Tổng môn học</p>
+        <p class="text-3xl font-black">@Model.Subjects.Count</p>
+    </div>
+    <div class="bg-gradient-to-br from-teal-400 to-teal-600 rounded-xl p-4 text-white">
+        <p class="text-xs text-teal-100 mb-1">Đang hoạt động</p>
+        <p class="text-3xl font-black">@Model.Subjects.Count(s => s.IsActive)</p>
+    </div>
+    <div class="bg-gradient-to-br from-fpt-orange to-orange-600 rounded-xl p-4 text-white">
+        <p class="text-xs text-orange-100 mb-1">Tổng tín chỉ TB</p>
+        <p class="text-3xl font-black">@(Model.Subjects.Any() ? Model.Subjects.Average(s => s.Credits).ToString("F1") : "0")</p>
+    </div>
+</div>
+
+<!-- Search Bar -->
+<div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 mb-4" data-aos="fade-up" data-aos-delay="80">
+    <div class="flex gap-3">
+        <div class="flex-1 relative">
+            <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400"></i>
+            <input type="text" id="searchInput" placeholder="Tìm kiếm theo tên hoặc mã môn học..."
+                   class="w-full pl-9 pr-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-fpt-navy/20 text-sm" />
+        </div>
+        <button onclick="clearSearch()" class="px-4 py-2.5 bg-slate-100 text-slate-600 rounded-xl text-sm font-semibold hover:bg-slate-200 transition-colors">
+            Xóa lọc
+        </button>
+    </div>
+</div>
+
+<!-- Table -->
+<div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden" data-aos="fade-up" data-aos-delay="100">
+    <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+        <h3 class="font-bold text-slate-800">Danh sách môn học</h3>
+        <span class="text-sm text-slate-400" id="subjectCount">@Model.Subjects.Count môn học</span>
+    </div>
+
+    <!-- Skeleton -->
+    <div id="skeletonRows" class="hidden">
+        @for (int i = 0; i < 5; i++)
+        {
+            <div class="flex items-center gap-4 px-6 py-4 border-b border-slate-50 animate-pulse">
+                <div class="h-4 bg-slate-200 rounded w-20"></div>
+                <div class="h-4 bg-slate-200 rounded w-40 flex-1"></div>
+                <div class="h-4 bg-slate-200 rounded w-12"></div>
+                <div class="h-4 bg-slate-200 rounded w-28"></div>
+                <div class="h-4 bg-slate-200 rounded w-24"></div>
+                <div class="flex gap-2 ml-auto">
+                    <div class="h-8 bg-slate-200 rounded-lg w-16"></div>
+                    <div class="h-8 bg-slate-200 rounded-lg w-16"></div>
+                </div>
+            </div>
+        }
+    </div>
+
+    <div class="overflow-x-auto">
+        @if (!Model.Subjects.Any())
+        {
+            <div class="text-center py-16 text-slate-400">
+                <i data-lucide="book-open" class="w-12 h-12 mx-auto mb-3 opacity-30"></i>
+                <p class="font-medium">Chưa có môn học nào</p>
+                <p class="text-sm mt-1">Nhấn "Thêm môn học" để bắt đầu</p>
+            </div>
+        }
+        else
+        {
+            <table class="w-full text-sm" id="subjectsTable">
+                <thead class="bg-slate-50 text-slate-500 text-xs font-semibold uppercase tracking-wider">
+                    <tr>
+                        <th class="px-5 py-3.5 text-left">Mã môn</th>
+                        <th class="px-5 py-3.5 text-left">Tên môn học</th>
+                        <th class="px-5 py-3.5 text-left">Tín chỉ</th>
+                        <th class="px-5 py-3.5 text-left">Học phí</th>
+                        <th class="px-5 py-3.5 text-left">Môn tiên quyết</th>
+                        <th class="px-5 py-3.5 text-left">Dùng cho lớp/kì</th>
+                        <th class="px-5 py-3.5 text-left">Trạng thái</th>
+                        <th class="px-5 py-3.5 text-right">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-50" id="subjectRows">
+                    @foreach (var sub in Model.Subjects)
+                    {
+                        <tr class="hover:bg-slate-50 transition-colors subject-row"
+                            data-name="@sub.Name.ToLower()"
+                            data-code="@sub.Code.ToLower()">
+                            <td class="px-5 py-3.5">
+                                <span class="text-xs font-mono bg-fpt-navy/10 text-fpt-navy px-2.5 py-1 rounded font-semibold">@sub.Code</span>
+                            </td>
+                            <td class="px-5 py-3.5 font-semibold text-slate-800">
+                                @sub.Name
+                                @if (!string.IsNullOrEmpty(sub.Description))
+                                {
+                                    <p class="text-xs text-slate-400 font-normal mt-0.5 truncate max-w-xs">@sub.Description</p>
+                                }
+                            </td>
+                            <td class="px-5 py-3.5">
+                                <span class="inline-flex items-center justify-center w-7 h-7 rounded-full bg-sky-100 text-sky-700 text-xs font-bold">@sub.Credits</span>
+                            </td>
+                            <td class="px-5 py-3.5 text-slate-700 font-medium">
+                                @sub.Price.ToString("N0") VNĐ
+                            </td>
+                            <td class="px-5 py-3.5">
+                                @if (sub.Prerequisites.Any())
+                                {
+                                    <div class="flex flex-wrap gap-1">
+                                        @foreach (var pre in sub.Prerequisites)
+                                        {
+                                            <span class="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded font-medium">@pre.PrerequisiteSubjectCode</span>
+                                        }
+                                    </div>
+                                }
+                                else
+                                {
+                                    <span class="text-slate-300 text-xs">Không có</span>
+                                }
+                            </td>
+                            <td class="px-5 py-3.5">
+                                @if (sub.Classes.Any())
+                                {
+                                    <div class="flex flex-wrap gap-1.5">
+                                        @foreach (var cls in sub.Classes.OrderByDescending(c => c.SemesterCode))
+                                        {
+                                            <div class="flex items-center gap-1 text-xs bg-blue-50 text-blue-700 px-2.5 py-1.5 rounded-lg border border-blue-200">
+                                                <span class="font-mono font-semibold">@cls.ClassName</span>
+                                                <span class="opacity-70">@cls.SemesterCode</span>
+                                            </div>
+                                        }
+                                    </div>
+                                }
+                                else
+                                {
+                                    <span class="text-slate-300 text-xs italic">Chưa dùng</span>
+                                }
+                            </td>
+                            <td class="px-5 py-3.5">
+                                @if (sub.IsActive)
+                                {
+                                    <span class="inline-flex items-center gap-1.5 text-xs font-semibold text-teal-700 bg-teal-100 px-2.5 py-1 rounded-full">
+                                        <span class="w-1.5 h-1.5 rounded-full bg-teal-500"></span> Hoạt động
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 bg-slate-100 px-2.5 py-1 rounded-full">
+                                        <span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span> Ngừng
+                                    </span>
+                                }
+                            </td>
+                            <td class="px-5 py-3.5">
+                                <div class="flex items-center justify-end gap-1.5">
+                                    <a href="/Admin/Subjects/Edit?id=@sub.Id"
+                                       class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold bg-sky-100 text-sky-700 hover:bg-sky-200 transition-colors">
+                                        <i data-lucide="edit-2" class="w-3 h-3"></i> Sửa
+                                    </a>
+                                    <button type="button"
+                                            onclick="confirmDelete(@sub.Id, '@sub.Name')"
+                                            class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold bg-red-100 text-red-600 hover:bg-red-200 transition-colors">
+                                        <i data-lucide="trash-2" class="w-3 h-3"></i> Xóa
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+</div>
+
+<!-- Modal Thêm / Sửa môn học -->
+<div id="subjectModal" class="fixed inset-0 z-50 hidden">
+    <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" onclick="closeModal()"></div>
+    <div class="relative z-10 flex items-center justify-center min-h-screen p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto" onclick="event.stopPropagation()">
+            <div class="flex items-center justify-between p-6 border-b border-slate-100 sticky top-0 bg-white z-10">
+                <div>
+                    <h3 class="text-lg font-bold text-fpt-navy" id="modalTitle">Thêm môn học mới</h3>
+                    <p class="text-sm text-slate-400 mt-0.5">Điền thông tin môn học bên dưới</p>
+                </div>
+                <button type="button" onclick="closeModal()" class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 text-slate-400">
+                    <i data-lucide="x" class="w-4 h-4"></i>
+                </button>
+            </div>
+
+            <!-- Create Form -->
+            <form id="createForm" method="post" asp-page-handler="Create" class="p-6 space-y-4">
+                @Html.AntiForgeryToken()
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1.5">Mã môn học <span class="text-red-500">*</span></label>
+                        <input type="text" name="CreateDto.Code" id="createCode" required placeholder="Ví dụ: PRF192"
+                               class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-fpt-navy/20 text-sm font-mono uppercase" />
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1.5">Tín chỉ <span class="text-red-500">*</span></label>
+                        <select name="CreateDto.Credits" id="createCredits"
+                                class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-fpt-navy/20 text-sm bg-white">
+                            @for (int i = 1; i <= 5; i++)
+                            {
+                                @if (i == 3)
+                                {
+                                    <option value="@i" selected>@i tín chỉ</option>
+                                }
+                                else
+                                {
+                                    <option value="@i">@i tín chỉ</option>
+                                }
+                            }
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-1.5">Tên môn học <span class="text-red-500">*</span></label>
+                    <input type="text" name="CreateDto.Name" id="createName" required placeholder="Ví dụ: Lập trình căn bản"
+                           class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-fpt-navy/20 text-sm" />
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-1.5">Mô tả</label>
+                    <textarea name="CreateDto.Description" id="createDescription" rows="3" placeholder="Mô tả ngắn về môn học..."
+                              class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-fpt-navy/20 text-sm resize-none"></textarea>
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-1.5">Học phí (VNĐ)</label>
+                    <input type="number" name="CreateDto.Price" id="createPrice" value="6000000" min="0" step="100000"
+                           class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-fpt-navy/20 text-sm" />
+                    <p class="text-xs text-slate-400 mt-1">Mặc định: 6,000,000 VNĐ</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-1.5">Môn tiên quyết</label>
+                    <div class="border border-slate-200 rounded-xl p-3 max-h-40 overflow-y-auto space-y-1.5">
+                        @foreach (var sub in Model.Subjects)
+                        {
+                            <label class="flex items-center gap-2 cursor-pointer hover:bg-slate-50 rounded-lg px-2 py-1">
+                                <input type="checkbox" name="CreateDto.PrerequisiteSubjectIds" value="@sub.Id"
+                                       class="rounded text-fpt-navy" />
+                                <span class="text-xs font-mono text-fpt-navy">@sub.Code</span>
+                                <span class="text-sm text-slate-700">@sub.Name</span>
+                            </label>
+                        }
+                        @if (!Model.Subjects.Any())
+                        {
+                            <p class="text-xs text-slate-400 text-center py-2">Chưa có môn học nào</p>
+                        }
+                    </div>
+                </div>
+                <div class="flex gap-3 pt-2">
+                    <button type="button" onclick="closeModal()"
+                            class="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-semibold text-sm hover:bg-slate-50 transition-colors">
+                        Hủy
+                    </button>
+                    <button type="submit"
+                            class="flex-1 px-4 py-2.5 rounded-xl bg-fpt-navy text-white font-semibold text-sm hover:bg-blue-900 transition-colors">
+                        Tạo môn học
+                    </button>
+                </div>
+            </form>
+
+            <!-- Edit Form -->
+            <form id="editForm" method="post" class="p-6 space-y-4 hidden">
+                @Html.AntiForgeryToken()
+                <input type="hidden" id="editId" />
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1.5">Mã môn học <span class="text-red-500">*</span></label>
+                        <input type="text" name="UpdateDto.Code" id="editCode" required
+                               class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-fpt-navy/20 text-sm font-mono uppercase" />
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1.5">Tín chỉ <span class="text-red-500">*</span></label>
+                        <select name="UpdateDto.Credits" id="editCredits"
+                                class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-fpt-navy/20 text-sm bg-white">
+                            @for (int i = 1; i <= 5; i++)
+                            {
+                                <option value="@i">@i tín chỉ</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-1.5">Tên môn học <span class="text-red-500">*</span></label>
+                    <input type="text" name="UpdateDto.Name" id="editName" required
+                           class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-fpt-navy/20 text-sm" />
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-1.5">Mô tả</label>
+                    <textarea name="UpdateDto.Description" id="editDescription" rows="3"
+                              class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-fpt-navy/20 text-sm resize-none"></textarea>
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-1.5">Học phí (VNĐ)</label>
+                    <input type="number" name="UpdateDto.Price" id="editPrice" min="0" step="100000"
+                           class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-fpt-navy/20 text-sm" />
+                </div>
+                <div>
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" name="UpdateDto.IsActive" id="editIsActive" value="true"
+                               class="rounded text-fpt-navy w-4 h-4" />
+                        <span class="text-sm font-semibold text-slate-700">Đang hoạt động</span>
+                    </label>
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-1.5">Môn tiên quyết</label>
+                    <div class="border border-slate-200 rounded-xl p-3 max-h-40 overflow-y-auto space-y-1.5" id="editPrereqContainer">
+                        @foreach (var sub in Model.Subjects)
+                        {
+                            <label class="flex items-center gap-2 cursor-pointer hover:bg-slate-50 rounded-lg px-2 py-1 edit-prereq-item">
+                                <input type="checkbox" name="UpdateDto.PrerequisiteSubjectIds" value="@sub.Id"
+                                       class="rounded text-fpt-navy edit-prereq-cb" data-subject-id="@sub.Id" />
+                                <span class="text-xs font-mono text-fpt-navy">@sub.Code</span>
+                                <span class="text-sm text-slate-700">@sub.Name</span>
+                            </label>
+                        }
+                    </div>
+                </div>
+                <div class="flex gap-3 pt-2">
+                    <button type="button" onclick="closeModal()"
+                            class="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-semibold text-sm hover:bg-slate-50 transition-colors">
+                        Hủy
+                    </button>
+                    <button type="submit"
+                            class="flex-1 px-4 py-2.5 rounded-xl bg-fpt-navy text-white font-semibold text-sm hover:bg-blue-900 transition-colors">
+                        Lưu thay đổi
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Hidden delete form -->
+<form id="deleteForm" method="post" asp-page-handler="Delete" class="hidden">
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="id" id="deleteId" />
+</form>
+
+@section Scripts {
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const s = document.getElementById('tempSuccessMsg');
+        const e = document.getElementById('tempErrorMsg');
+        if (s) showToast(s.textContent.trim(), 'success');
+        if (e) showToast(e.textContent.trim(), 'error');
+    });
+
+    // Search
+    const searchInput = document.getElementById('searchInput');
+    searchInput?.addEventListener('input', function () {
+        const q = this.value.trim().toLowerCase();
+        const rows = document.querySelectorAll('.subject-row');
+        let visible = 0;
+        rows.forEach(row => {
+            const name = row.dataset.name || '';
+            const code = row.dataset.code || '';
+            const match = !q || name.includes(q) || code.includes(q);
+            row.style.display = match ? '' : 'none';
+            if (match) visible++;
+        });
+        const cnt = document.getElementById('subjectCount');
+        if (cnt) cnt.textContent = visible + ' môn học';
+    });
+
+    function clearSearch() {
+        if (searchInput) { searchInput.value = ''; searchInput.dispatchEvent(new Event('input')); }
+    }
+
+    function openCreateModal() {
+        document.getElementById('modalTitle').textContent = 'Thêm môn học mới';
+        document.getElementById('createForm').classList.remove('hidden');
+        document.getElementById('editForm').classList.add('hidden');
+        document.getElementById('subjectModal').classList.remove('hidden');
+    }
+
+    function closeModal() {
+        document.getElementById('subjectModal').classList.add('hidden');
+    }
+
+    function openEditModal(id, code, name, credits, price, description, isActive, prereqIds) {
+        document.getElementById('modalTitle').textContent = 'Chỉnh sửa môn học';
+        document.getElementById('createForm').classList.add('hidden');
+        const editForm = document.getElementById('editForm');
+        editForm.classList.remove('hidden');
+        editForm.action = `?handler=Update&id=${id}`;
+
+        document.getElementById('editId').value = id;
+        document.getElementById('editCode').value = code;
+        document.getElementById('editName').value = name;
+        document.getElementById('editCredits').value = credits;
+        document.getElementById('editPrice').value = price;
+        document.getElementById('editDescription').value = description;
+        document.getElementById('editIsActive').checked = isActive;
+
+        // Reset prereqs
+        document.querySelectorAll('.edit-prereq-cb').forEach(cb => {
+            cb.checked = prereqIds.includes(parseInt(cb.dataset.subjectId));
+        });
+
+        document.getElementById('subjectModal').classList.remove('hidden');
+    }
+
+    function confirmDelete(id, name) {
+        Swal.fire({
+            title: 'Xóa môn học?',
+            html: `Môn học <b>${name}</b> sẽ bị xóa.<br><small class="text-slate-400">Hành động này không thể hoàn tác!</small>`,
+            icon: 'error',
+            showCancelButton: true,
+            confirmButtonColor: '#EF4444',
+            cancelButtonColor: '#94A3B8',
+            confirmButtonText: 'Xóa',
+            cancelButtonText: 'Hủy'
+        }).then(r => {
+            if (r.isConfirmed) {
+                document.getElementById('deleteId').value = id;
+                document.getElementById('deleteForm').submit();
+            }
+        });
+    }
+
+    // SignalR
+    (async function () {
+        try {
+            const conn = await signalRManager.connect('notification', '/hubs/notification');
+            await conn.invoke('JoinGroup', 'admin_all');
+            conn.on('SubjectUpdated', function () {
+                showToast('Danh sách môn học vừa được cập nhật.', 'info');
+            });
+        } catch (e) { console.warn('SignalR not connected', e); }
+    })();
+</script>
+}

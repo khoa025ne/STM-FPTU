@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - FPT Student</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://unpkg.com/aos@2.3.4/dist/aos.css" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.0/signalr.min.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'fpt-navy': '#002E5D',
+                        'fpt-orange': '#FF6B35'
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-slate-100 font-sans">
+@{
+    var layoutFullName = ViewData["FullName"]?.ToString() ?? "Sinh viên";
+    var layoutRollNumber = ViewData["RollNumber"]?.ToString() ?? "Sinh viên";
+    var layoutAvatarUrl = ViewData["AvatarUrl"]?.ToString();
+    var layoutInitial = ViewData["UserInitial"]?.ToString() ?? "S";
+    var layoutHasAvatar = !string.IsNullOrEmpty(layoutAvatarUrl);
+}
+<div class="flex h-screen overflow-hidden">
+    <!-- Sidebar -->
+    <aside class="w-64 bg-fpt-navy flex flex-col flex-shrink-0 shadow-xl">
+        <div class="p-6 border-b border-white/10">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-fpt-orange rounded-lg flex items-center justify-center">
+                    <span class="text-white font-bold text-lg">F</span>
+                </div>
+                <div>
+                    <p class="text-white font-bold text-base leading-none">FPT System</p>
+                    <p class="text-slate-400 text-xs mt-1">Student Portal</p>
+                </div>
+            </div>
+        </div>
+
+        <nav class="flex-1 p-4 space-y-1 overflow-y-auto">
+            <p class="text-slate-500 text-xs font-semibold uppercase tracking-wider px-4 mb-2">Tổng quan</p>
+            <a href="/Student/Dashboard" class="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-300 hover:bg-white/10 hover:text-white transition-all duration-200">
+                <i data-lucide="layout-dashboard" class="w-5 h-5"></i>
+                <span>Dashboard</span>
+            </a>
+
+            <p class="text-slate-500 text-xs font-semibold uppercase tracking-wider px-4 mb-2 mt-4">Học tập</p>
+            <a href="/Student/Enrollment" class="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-300 hover:bg-white/10 hover:text-white transition-all duration-200">
+                <i data-lucide="clipboard-list" class="w-5 h-5"></i>
+                <span>Đăng ký học</span>
+            </a>
+            <a href="/Student/Schedule" class="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-300 hover:bg-white/10 hover:text-white transition-all duration-200">
+                <i data-lucide="calendar-days" class="w-5 h-5"></i>
+                <span>Thời khóa biểu</span>
+            </a>
+            <a href="/Student/Grades" class="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-300 hover:bg-white/10 hover:text-white transition-all duration-200">
+                <i data-lucide="star" class="w-5 h-5"></i>
+                <span>Điểm số</span>
+            </a>
+            <a href="/Student/Attendance" class="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-300 hover:bg-white/10 hover:text-white transition-all duration-200">
+                <i data-lucide="clipboard-check" class="w-5 h-5"></i>
+                <span>Điểm danh</span>
+            </a>
+            <a href="/Student/Quizzes" class="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-300 hover:bg-white/10 hover:text-white transition-all duration-200">
+                <i data-lucide="file-question" class="w-5 h-5"></i>
+                <span>Quiz</span>
+            </a>
+
+            <p class="text-slate-500 text-xs font-semibold uppercase tracking-wider px-4 mb-2 mt-4">Tiện ích</p>
+            <a href="/Student/Wallet" class="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-300 hover:bg-white/10 hover:text-white transition-all duration-200">
+                <i data-lucide="wallet" class="w-5 h-5"></i>
+                <span>Ví tiền</span>
+            </a>
+            <a href="/Student/Chatbot" class="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-300 hover:bg-white/10 hover:text-white transition-all duration-200">
+                <i data-lucide="bot" class="w-5 h-5"></i>
+                <span>Chatbot AI</span>
+            </a>
+            <a href="/Student/Profile" class="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-300 hover:bg-white/10 hover:text-white transition-all duration-200">
+                <i data-lucide="user-circle" class="w-5 h-5"></i>
+                <span>Hồ sơ</span>
+            </a>
+        </nav>
+
+        <div class="p-4 border-t border-white/10">
+            <div class="flex items-center gap-3">
+                <div class="relative w-9 h-9 flex-shrink-0">
+                    <img id="layoutAvatarImg" src="@layoutAvatarUrl ?? string.Empty" alt="Avatar"
+                         class="w-9 h-9 rounded-full object-cover @(layoutHasAvatar ? "" : "hidden")" />
+                    <div id="layoutAvatarPlaceholder"
+                         class="absolute inset-0 flex items-center justify-center rounded-full bg-fpt-orange text-white text-sm font-bold @(layoutHasAvatar ? "hidden" : "")">
+                        <span id="layoutAvatarInitial">@layoutInitial</span>
+                    </div>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <p id="layoutFullName" class="text-white text-sm font-medium truncate">@layoutFullName</p>
+                    <p id="layoutRollNumber" class="text-slate-400 text-xs">@layoutRollNumber</p>
+                </div>
+                <a href="/Auth/Logout" class="text-slate-400 hover:text-white transition-colors">
+                    <i data-lucide="log-out" class="w-4 h-4"></i>
+                </a>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <div class="flex-1 flex flex-col overflow-hidden">
+        <header class="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between shadow-sm">
+            <div>
+                <h1 class="text-xl font-bold text-slate-800">@(ViewData["Title"] ?? "Dashboard")</h1>
+                <p class="text-slate-500 text-sm mt-0.5">Hệ thống quản lý sinh viên FPT</p>
+            </div>
+            <div class="flex items-center gap-4">
+                <button class="relative text-slate-500 hover:text-fpt-navy transition-colors">
+                    <i data-lucide="bell" class="w-5 h-5"></i>
+                    <span id="notifBadge" class="hidden absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">0</span>
+                </button>
+                <a href="/Student/Wallet" class="flex items-center gap-2 text-sm bg-fpt-orange/10 text-fpt-orange px-3 py-1.5 rounded-lg hover:bg-fpt-orange hover:text-white transition-all">
+                    <i data-lucide="wallet" class="w-4 h-4"></i>
+                    <span id="walletBalance">Ví tiền</span>
+                </a>
+                <a href="/Auth/Logout" class="flex items-center gap-2 text-sm text-slate-600 hover:text-red-500 transition-colors">
+                    <i data-lucide="log-out" class="w-4 h-4"></i>
+                    <span>Đăng xuất</span>
+                </a>
+            </div>
+        </header>
+
+        <main class="flex-1 overflow-y-auto p-6">
+            @RenderBody()
+        </main>
+    </div>
+</div>
+
+<script src="https://unpkg.com/aos@2.3.4/dist/aos.js"></script>
+<script src="~/js/signalr-connections.js"></script>
+<script>
+    AOS.init({ duration: 600, once: true });
+    lucide.createIcons();
+
+    // Student SignalR connections
+    (async function() {
+        try {
+            const userId = @(ViewData["UserId"] ?? 0);
+            const notifConn = await signalRManager.connect('notification', '/hubs/notification');
+            await notifConn.invoke('JoinGroup', `student_${userId}`);
+            notifConn.on('NewNotification', data => {
+                showToast(data.title || data.message || 'Thông báo mới', 'info');
+                const badge = document.getElementById('notifBadge');
+                if (badge) {
+                    badge.classList.remove('hidden');
+                    badge.textContent = (parseInt(badge.textContent) || 0) + 1;
+                }
+            });
+            notifConn.on('WalletUpdated', data => {
+                showToast(`Ví tiền đã được cập nhật: ${data.balance?.toLocaleString('vi-VN')} VND`, 'success');
+            });
+            notifConn.on('AvatarUpdated', data => {
+                const img = document.getElementById('layoutAvatarImg');
+                const placeholder = document.getElementById('layoutAvatarPlaceholder');
+                const initial = document.getElementById('layoutAvatarInitial');
+                const fullNameEl = document.getElementById('layoutFullName');
+                const rollEl = document.getElementById('layoutRollNumber');
+
+                if (img) {
+                    if (data?.avatarUrl) {
+                        img.src = data.avatarUrl;
+                        img.classList.remove('hidden');
+                    } else {
+                        img.classList.add('hidden');
+                    }
+                }
+
+                if (placeholder) {
+                    if (data?.avatarUrl) {
+                        placeholder.classList.add('hidden');
+                    } else {
+                        placeholder.classList.remove('hidden');
+                    }
+                }
+
+                const name = data?.fullName?.trim();
+                if (name && fullNameEl) {
+                    fullNameEl.textContent = name;
+                    if (initial) {
+                        const initialChar = name.charAt(0).toUpperCase();
+                        initial.textContent = initialChar || initial.textContent;
+                    }
+                }
+
+                if (typeof data?.rollNumber === 'string' && rollEl) {
+                    rollEl.textContent = data.rollNumber;
+                }
+            });
+            notifConn.on('GradesPublished', data => {
+                showToast('Điểm số đã được công bố!', 'success');
+            });
+
+            const gradeConn = await signalRManager.connect('grade', '/hubs/grade');
+            const quizConn = await signalRManager.connect('quiz', '/hubs/quiz');
+        } catch(e) { console.warn('SignalR not connected', e); }
+    })();
+</script>
+@RenderSection("Scripts", required: false)
+</body>
+</html>

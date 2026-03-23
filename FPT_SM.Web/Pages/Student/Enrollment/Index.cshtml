@@ -1,0 +1,410 @@
+@page
+@model FPT_SM.Web.Pages.Student.Enrollment.IndexModel
+@{
+    Layout = "_StudentLayout";
+    ViewData["Title"] = "Đăng ký Học phần";
+}
+
+<!-- Hero Banner -->
+<div class="bg-gradient-to-r from-fpt-navy via-blue-800 to-fpt-orange rounded-2xl p-6 mb-6 relative overflow-hidden" data-aos="fade-down">
+    <div class="absolute top-0 right-0 w-56 h-56 bg-white/5 rounded-full -translate-y-1/3 translate-x-1/4"></div>
+    <div class="absolute bottom-0 left-20 w-32 h-32 bg-fpt-orange/20 rounded-full translate-y-1/2"></div>
+    <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+            <div class="flex items-center gap-2 mb-2">
+                <div class="w-8 h-8 bg-white/20 rounded-xl flex items-center justify-center">
+                    <i data-lucide="book-open" class="w-4 h-4 text-white"></i>
+                </div>
+                <h2 class="text-white font-black text-xl">Đăng ký Học phần</h2>
+            </div>
+            @if (Model.CurrentSemester != null)
+            {
+                <span class="bg-white/20 text-white text-xs font-bold px-3 py-1 rounded-full">
+                    📅 @Model.CurrentSemester.Name &nbsp;·&nbsp; @Model.CurrentSemester.StartDate.ToString("dd/MM/yyyy") – @Model.CurrentSemester.EndDate.ToString("dd/MM/yyyy")
+                </span>
+            }
+            else
+            {
+                <span class="bg-amber-400/80 text-white text-xs font-bold px-3 py-1 rounded-full">
+                    ⚠️ Hiện không có học kỳ đang diễn ra
+                </span>
+            }
+        </div>
+        <div class="flex flex-col md:items-end gap-1">
+            <p class="text-white/60 text-xs">Số dư ví</p>
+            <p id="wallet-balance" class="text-white font-black text-3xl">@((Model.Wallet?.Balance ?? 0).ToString("N0")) ₫</p>
+            <a href="/Student/Wallet" class="text-white/70 hover:text-white text-xs flex items-center gap-1 mt-1">
+                <i data-lucide="plus-circle" class="w-3 h-3"></i> Nạp thêm tiền
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Info bar -->
+<div class="bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 mb-6 flex items-center gap-2" data-aos="fade-up">
+    <i data-lucide="info" class="w-4 h-4 text-blue-500 flex-shrink-0"></i>
+    <p class="text-blue-700 text-sm">
+        <strong>Học phí:</strong> Mỗi môn học tương đương với học phí được xác định theo tín chỉ.
+        Số dư ví sẽ bị trừ ngay khi đăng ký thành công. Tối đa <strong>5 môn/học kỳ</strong>.
+    </p>
+</div>
+
+@if (ViewData["SuccessMessage"] != null)
+{
+    <div class="mb-4 bg-teal-50 border border-teal-200 text-teal-800 px-4 py-3 rounded-xl flex items-center gap-2" data-aos="fade-in">
+        <i data-lucide="check-circle-2" class="w-4 h-4 flex-shrink-0"></i>
+        <span class="text-sm font-medium">@ViewData["SuccessMessage"]</span>
+    </div>
+}
+@if (ViewData["ErrorMessage"] != null)
+{
+    <div class="mb-4 bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-xl flex items-center gap-2" data-aos="fade-in">
+        <i data-lucide="alert-circle" class="w-4 h-4 flex-shrink-0"></i>
+        <span class="text-sm font-medium">@ViewData["ErrorMessage"]</span>
+    </div>
+}
+
+<!-- Section 1: Môn đang học -->
+<div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden mb-6" data-aos="fade-up">
+    <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+        <h3 class="font-bold text-slate-800 flex items-center gap-2">
+            <i data-lucide="layers" class="w-5 h-5 text-fpt-navy"></i>
+            Môn đang học
+        </h3>
+        <span class="text-xs text-slate-500 bg-slate-100 px-2.5 py-1 rounded-full font-medium">
+            @Model.CurrentEnrollments.Count môn
+        </span>
+    </div>
+
+    @if (!Model.CurrentEnrollments.Any())
+    {
+        <div class="flex flex-col items-center justify-center py-12 text-slate-400">
+            <i data-lucide="inbox" class="w-10 h-10 mb-2 opacity-30"></i>
+            <p class="font-medium text-sm">Chưa đăng ký môn học nào trong học kỳ này</p>
+        </div>
+    }
+    else
+    {
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="bg-slate-50 text-slate-500 text-xs font-semibold uppercase tracking-wide">
+                        <th class="px-4 py-3 text-left">Môn học</th>
+                        <th class="px-4 py-3 text-left">Lớp / Slot</th>
+                        <th class="px-4 py-3 text-left">Giáo viên</th>
+                        <th class="px-4 py-3 text-center">Trạng thái</th>
+                        <th class="px-4 py-3 text-center">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-50">
+                    @foreach (var e in Model.CurrentEnrollments)
+                    {
+                        <tr class="hover:bg-slate-50/50 transition-colors">
+                            <td class="px-4 py-3">
+                                <p class="font-bold text-slate-800">@e.SubjectName</p>
+                                <p class="text-slate-400 text-xs">@e.SubjectCode</p>
+                            </td>
+                            <td class="px-4 py-3">
+                                <p class="font-medium text-slate-700">@e.ClassName</p>
+                                <p class="text-slate-400 text-xs">
+                                    @e.DayName &nbsp;@e.StartTime.ToString(@"hh\:mm") – @e.EndTime.ToString(@"hh\:mm")
+                                    @if (!string.IsNullOrEmpty(e.RoomNumber))
+                                    {
+                                        <span>· Phòng @e.RoomNumber</span>
+                                    }
+                                </p>
+                            </td>
+                            <td class="px-4 py-3 text-slate-600">@e.TeacherName</td>
+                            <td class="px-4 py-3 text-center">
+                                @{
+                                    var (sBg, sTxt) = e.Status switch
+                                    {
+                                        1 => ("bg-sky-100", "text-sky-700"),
+                                        2 => ("bg-teal-100", "text-teal-700"),
+                                        3 => ("bg-slate-100", "text-slate-600"),
+                                        4 => ("bg-amber-100", "text-amber-700"),
+                                        5 => ("bg-red-100", "text-red-700"),
+                                        _ => ("bg-gray-100", "text-gray-600")
+                                    };
+                                }
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold @sBg @sTxt">
+                                    @e.StatusName
+                                </span>
+                                @if (e.IsFailedByAbsence)
+                                {
+                                    <span class="block mt-1 text-xs text-red-500">⚠️ Cấm thi (vắng @e.AbsentCount buổi)</span>
+                                }
+                            </td>
+                            <td class="px-4 py-3 text-center">
+                                @if ((e.Status == 1 || e.Status == 2) && Model.CurrentSemester != null)
+                                {
+                                    <button type="button"
+                                            onclick="confirmDrop(@e.Id, '@e.SubjectName')"
+                                            class="inline-flex items-center gap-1 px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 text-xs font-semibold rounded-lg border border-red-200 transition-colors">
+                                        <i data-lucide="x-circle" class="w-3 h-3"></i>
+                                        Rút môn
+                                    </button>
+                                }
+                                else
+                                {
+                                    <span class="text-slate-300 text-xs">–</span>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
+
+<!-- Section 2: Đăng ký môn mới -->
+@if (Model.CurrentSemester != null)
+{
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden" data-aos="fade-up" data-aos-delay="100">
+        <div class="px-5 py-4 border-b border-slate-100">
+            <h3 class="font-bold text-slate-800 flex items-center gap-2">
+                <i data-lucide="plus-circle" class="w-5 h-5 text-fpt-orange"></i>
+                Đăng ký Môn học mới
+            </h3>
+            <p class="text-slate-400 text-xs mt-0.5">Chọn môn học và lớp phù hợp với thời khóa biểu của bạn</p>
+        </div>
+
+        @if (!Model.AvailableSubjects.Any())
+        {
+            <div class="flex flex-col items-center justify-center py-12 text-slate-400">
+                <i data-lucide="check-circle-2" class="w-10 h-10 mb-2 opacity-30 text-teal-400"></i>
+                <p class="font-medium text-sm">Bạn đã đăng ký tất cả môn học hoặc không có môn học khả dụng</p>
+            </div>
+        }
+        else
+        {
+            <div class="divide-y divide-slate-100">
+                @foreach (var subject in Model.AvailableSubjects)
+                {
+                    <div class="p-5">
+                        <div class="flex items-start justify-between gap-4 mb-3">
+                            <div>
+                                <div class="flex items-center gap-2 flex-wrap">
+                                    <h4 class="font-bold text-slate-800">@subject.SubjectName</h4>
+                                    <span class="bg-slate-100 text-slate-500 text-xs font-bold px-2 py-0.5 rounded-full">@subject.SubjectCode</span>
+                                    <span class="bg-blue-50 text-blue-600 text-xs font-bold px-2 py-0.5 rounded-full">@subject.Credits tín chỉ</span>
+                                </div>
+                                <div class="flex items-center gap-3 mt-1">
+                                    <span class="text-fpt-orange font-black text-lg">@subject.Price.ToString("N0") ₫</span>
+                                    @if (!subject.PrerequisitesMet)
+                                    {
+                                        <span class="bg-amber-50 border border-amber-200 text-amber-700 text-xs px-2 py-0.5 rounded-full font-medium">
+                                            ⚠️ Chưa đủ điều kiện tiên quyết
+                                        </span>
+                                    }
+                                    @if (subject.Price > (Model.Wallet?.Balance ?? 0))
+                                    {
+                                        <span class="bg-red-50 border border-red-200 text-red-600 text-xs px-2 py-0.5 rounded-full font-medium">
+                                            💰 Số dư không đủ
+                                        </span>
+                                    }
+                                </div>
+                                @if (!subject.PrerequisitesMet && subject.MissingPrerequisites.Any())
+                                {
+                                    <p class="text-amber-600 text-xs mt-1">
+                                        Môn tiên quyết còn thiếu: @string.Join(", ", subject.MissingPrerequisites)
+                                    </p>
+                                }
+                            </div>
+                            <span class="bg-slate-100 text-slate-500 text-xs px-2 py-1 rounded-lg font-medium whitespace-nowrap">
+                                @subject.AvailableClasses.Count lớp khả dụng
+                            </span>
+                        </div>
+
+                        @if (!subject.AvailableClasses.Any())
+                        {
+                            <p class="text-slate-400 text-xs bg-slate-50 rounded-lg px-3 py-2">Không có lớp học khả dụng cho môn này.</p>
+                        }
+                        else
+                        {
+                            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+                                @foreach (var cls in subject.AvailableClasses)
+                                {
+                                    var canEnroll = subject.PrerequisitesMet && subject.Price <= (Model.Wallet?.Balance ?? 0);
+                                    <div class="border-2 @(canEnroll ? "border-slate-200 hover:border-fpt-navy" : "border-slate-100 opacity-60") rounded-xl p-3 transition-all">
+                                        <div class="flex items-start justify-between gap-2 mb-2">
+                                            <div>
+                                                <p class="font-bold text-slate-800 text-sm">@cls.Name</p>
+                                                <p class="text-slate-500 text-xs">@cls.TeacherName</p>
+                                            </div>
+                                            <span class="bg-sky-100 text-sky-700 text-xs font-bold px-2 py-0.5 rounded-full whitespace-nowrap">
+                                                @cls.DayName
+                                            </span>
+                                        </div>
+                                        <div class="grid grid-cols-2 gap-1 text-xs text-slate-500 mb-3">
+                                            <span class="flex items-center gap-1">
+                                                <i data-lucide="clock" class="w-3 h-3"></i>
+                                                @cls.StartTime.ToString(@"hh\:mm") – @cls.EndTime.ToString(@"hh\:mm")
+                                            </span>
+                                            <span class="flex items-center gap-1">
+                                                <i data-lucide="users" class="w-3 h-3"></i>
+                                                @cls.Enrolled/@cls.Capacity chỗ
+                                            </span>
+                                            @if (!string.IsNullOrEmpty(cls.RoomNumber))
+                                            {
+                                                <span class="flex items-center gap-1">
+                                                    <i data-lucide="map-pin" class="w-3 h-3"></i>
+                                                    Phòng @cls.RoomNumber
+                                                </span>
+                                            }
+                                            <span class="flex items-center gap-1 col-span-@(string.IsNullOrEmpty(cls.RoomNumber) ? "2" : "1")">
+                                                <i data-lucide="bar-chart-2" class="w-3 h-3"></i>
+                                                Còn @cls.AvailableSlots chỗ trống
+                                            </span>
+                                        </div>
+                                        @if (canEnroll)
+                                        {
+                                            <button type="button"
+                                                    onclick="confirmEnroll(@cls.Id, '@subject.SubjectName', @subject.Price, @Model.CurrentSemester.Id)"
+                                                    class="w-full bg-fpt-navy hover:bg-blue-800 text-white text-xs font-bold py-2 px-3 rounded-lg transition-colors flex items-center justify-center gap-1.5">
+                                                <i data-lucide="plus" class="w-3 h-3"></i>
+                                                Đăng ký – @subject.Price.ToString("N0") ₫
+                                            </button>
+                                        }
+                                        else
+                                        {
+                                            <button disabled
+                                                    class="w-full bg-slate-100 text-slate-400 text-xs font-bold py-2 px-3 rounded-lg cursor-not-allowed">
+                                                @if (!subject.PrerequisitesMet)
+                                                {
+                                                    <span>Chưa đủ điều kiện</span>
+                                                }
+                                                else
+                                                {
+                                                    <span>Số dư không đủ</span>
+                                                }
+                                            </button>
+                                        }
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        }
+    </div>
+}
+
+<!-- Hidden forms -->
+<form id="enrollForm" method="post" asp-page-handler="Enroll" class="hidden">
+    <input type="hidden" name="classId" id="enrollClassId" />
+    <input type="hidden" name="semesterId" id="enrollSemesterId" />
+</form>
+<form id="dropForm" method="post" asp-page-handler="Drop" class="hidden">
+    <input type="hidden" name="enrollmentId" id="dropEnrollmentId" />
+</form>
+
+@section Scripts {
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.all.min.js"></script>
+<script src="~/lib/microsoft/signalr/dist/browser/signalr.min.js"></script>
+<script>
+    function confirmEnroll(classId, subjectName, price, semesterId) {
+        Swal.fire({
+            title: 'Xác nhận đăng ký',
+            html: `<div class="text-left">
+                <p class="text-slate-700 mb-2">Bạn có chắc muốn đăng ký môn:</p>
+                <p class="font-bold text-fpt-navy text-lg mb-3">${subjectName}</p>
+                <div class="bg-amber-50 border border-amber-200 rounded-xl p-3">
+                    <p class="text-amber-700 text-sm font-semibold">💰 Học phí sẽ bị trừ: <strong>${Number(price).toLocaleString('vi-VN')} ₫</strong></p>
+                </div>
+            </div>`,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: '✅ Xác nhận đăng ký',
+            cancelButtonText: '❌ Hủy',
+            confirmButtonColor: '#003087',
+            cancelButtonColor: '#6b7280',
+            customClass: { popup: 'rounded-2xl' }
+        }).then(result => {
+            if (result.isConfirmed) {
+                document.getElementById('enrollClassId').value = classId;
+                document.getElementById('enrollSemesterId').value = semesterId;
+                document.getElementById('enrollForm').submit();
+            }
+        });
+    }
+
+    function confirmDrop(enrollmentId, subjectName) {
+        Swal.fire({
+            title: 'Rút môn học',
+            html: `<div class="text-left">
+                <p class="text-slate-700 mb-2">Bạn có chắc muốn rút môn:</p>
+                <p class="font-bold text-red-600 text-lg mb-3">${subjectName}</p>
+                <div class="bg-red-50 border border-red-200 rounded-xl p-3">
+                    <p class="text-red-700 text-sm">⚠️ Hành động này <strong>không thể hoàn tác</strong>. Học phí đã thanh toán sẽ không được hoàn lại.</p>
+                </div>
+            </div>`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: '🗑️ Xác nhận rút môn',
+            cancelButtonText: '⬅️ Quay lại',
+            confirmButtonColor: '#ef4444',
+            cancelButtonColor: '#6b7280',
+            customClass: { popup: 'rounded-2xl' }
+        }).then(result => {
+            if (result.isConfirmed) {
+                document.getElementById('dropEnrollmentId').value = enrollmentId;
+                document.getElementById('dropForm').submit();
+            }
+        });
+    }
+
+    // SignalR
+    const userId = @(ViewData["UserId"] ?? "0");
+    const connection = new signalR.HubConnectionBuilder()
+        .withUrl("/notificationHub")
+        .withAutomaticReconnect()
+        .build();
+
+    connection.on("WalletUpdated", function (newBalance) {
+        const el = document.getElementById('wallet-balance');
+        if (el) el.textContent = Number(newBalance).toLocaleString('vi-VN') + ' ₫';
+    });
+
+    // Listen for semester updates from Admin
+    connection.on("SemesterUpdated", async function (data) {
+        showToast('Cập nhật học kỳ', `Hành động: ${data.action}`, 'info');
+        await new Promise(r => setTimeout(r, 1000));
+        window.location.reload();
+    });
+
+    // Listen for subject updates from Admin
+    connection.on("SubjectUpdated", async function (data) {
+        showToast('Cập nhật môn học', `Môn: ${data.name} - ${data.action}`, 'info');
+        if (data.action === 'delete') {
+            await new Promise(r => setTimeout(r, 1000));
+            window.location.reload();
+        }
+    });
+
+    connection.on("ClassCapacityChanged", async function (data) {
+        const remaining = data.remainingSlots;
+        const message = remaining > 0
+            ? `Còn ${remaining} chỗ`
+            : 'Đã đầy';
+        showToast('Cập nhật lớp', `${data.className} - ${message}`, 'info');
+        await new Promise(r => setTimeout(r, 1000));
+        window.location.reload();
+    });
+
+    connection.on("ClassUpdated", async function (data) {
+        if (data.action === 'delete') {
+            showToast('Lớp bị hủy', `${data.classCode} không còn tồn tại`, 'warning');
+            await new Promise(r => setTimeout(r, 1500));
+            window.location.reload();
+        }
+    });
+
+    connection.start().then(() => {
+        connection.invoke("JoinGroup", "student_" + userId);
+        connection.invoke("JoinGroup", "student_all");
+    }).catch(console.error);
+</script>
+}

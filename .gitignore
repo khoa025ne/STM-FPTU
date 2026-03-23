@@ -1,0 +1,57 @@
+# Build and Object Files
+bin/
+obj/
+*.dll
+*.exe
+*.pdb
+*.o
+
+# Visual Studio
+.vs/
+.vscode/
+*.user
+*.suo
+*.sln.iml
+*.csproj.user
+.idea/
+
+# Markdown Documentation (NOT pushing to GitHub)
+*.md
+!README.md
+!LICENSE.md
+
+# Environment & Secrets
+.env
+.env.local
+.env.*.local
+appsettings.Development.json
+appsettings.Production.json
+
+# Node & npm
+node_modules/
+package-lock.json
+yarn.lock
+
+# Database Files
+*.db
+*.sqlite
+*.sqlite3
+
+# Temporary & System Files
+.DS_Store
+Thumbs.db
+*.log
+*.tmp
+*.bak
+*~
+.swp
+.swo
+
+# Testing
+test_file.txt
+.coverage
+
+# Build Output
+build/
+dist/
+publish/
