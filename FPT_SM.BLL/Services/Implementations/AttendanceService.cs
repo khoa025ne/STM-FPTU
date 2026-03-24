@@ -83,34 +83,24 @@ public class AttendanceService : IAttendanceService
             var enrollment = await _enrollmentRepo.GetByIdAsync(item.EnrollmentId);
             if (enrollment == null || enrollment.Status == 5) continue;
 
-            // Check for existing attendance by date AND session number (to prevent duplicates)
+            // Check for existing attendance by ONLY date (not SessionNumber, since SessionNumber is derived)
+            // One student can only have ONE attendance record per date
             var existing = await _context.Attendances
                 .FirstOrDefaultAsync(a => a.EnrollmentId == item.EnrollmentId 
-                    && a.SlotDate.Date == dto.Date.Date 
-                    && a.SessionNumber == dto.SessionNumber);
+                    && a.SlotDate.Date == dto.Date.Date);
 
             if (existing != null)
             {
-                // Update existing record
+                // Update existing record (even if you save the same date multiple times)
                 if (!existing.IsEditable) continue;
                 existing.Status = item.Status;
                 existing.Note = item.Note;
+                existing.SessionNumber = dto.SessionNumber;  // Update session number too
                 _context.Attendances.Update(existing);
             }
             else
             {
-                // Before adding new, delete any OTHER records for same date with DIFFERENT session (old wrong data)
-                var duplicates = await _context.Attendances
-                    .Where(a => a.EnrollmentId == item.EnrollmentId 
-                        && a.SlotDate.Date == dto.Date.Date
-                        && a.SessionNumber != dto.SessionNumber)  // Only delete different sessions for same date
-                    .ToListAsync();
-                
-                if (duplicates.Count > 0)
-                {
-                    _context.Attendances.RemoveRange(duplicates);
-                }
-
+                // Create new record (no need to delete old ones, as each date has only one record per student)
                 _context.Attendances.Add(new Attendance
                 {
                     EnrollmentId = item.EnrollmentId,
