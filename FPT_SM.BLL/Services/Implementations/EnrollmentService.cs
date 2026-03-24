@@ -62,7 +62,10 @@ public class EnrollmentService : IEnrollmentService
         var allSubjects = await _subjectRepo.GetAllWithPrerequisitesAsync();
         var result = new List<AvailableSubjectDto>();
 
-        foreach (var subject in allSubjects)
+        // Get enrollment eligibility to filter by program semester
+        var eligibility = await GetEnrollmentEligibilityAsync(studentId);
+
+        foreach (var subject in allSubjects.Where(s => s.ProgramSemester == eligibility.PayableProgramSemester))
         {
             if (await _enrollmentRepo.IsStudentEnrolledInSubjectAsync(studentId, subject.Id, semesterId))
                 continue;
@@ -104,6 +107,7 @@ public class EnrollmentService : IEnrollmentService
                 SubjectName = subject.Name,
                 Credits = subject.Credits,
                 Price = subject.Price,
+                ProgramSemester = subject.ProgramSemester,
                 PrerequisitesMet = prereqsMet,
                 MissingPrerequisites = missing,
                 AvailableClasses = classDtos
@@ -116,6 +120,11 @@ public class EnrollmentService : IEnrollmentService
     {
         var student = await _userRepo.GetByIdAsync(studentId);
         if (student == null) return ServiceResult.Failure("Không tìm thấy sinh viên.");
+
+        // Check enrollment eligibility
+        var eligibility = await GetEnrollmentEligibilityAsync(studentId);
+        if (!eligibility.CanEnroll)
+            return ServiceResult.Failure(eligibility.Message);
 
         // Validate all classes first
         var classesToEnroll = new List<Class>();
@@ -134,6 +143,10 @@ public class EnrollmentService : IEnrollmentService
 
             if (await _enrollmentRepo.IsStudentEnrolledInSubjectAsync(studentId, cls.SubjectId, dto.SemesterId))
                 return ServiceResult.Failure($"Bạn đã đăng ký môn {cls.Subject?.Name} trong học kỳ này rồi.");
+
+            // Validate program semester
+            if (cls.Subject?.ProgramSemester != eligibility.PayableProgramSemester)
+                return ServiceResult.Failure($"Hiện tại bạn chỉ được thanh toán môn của kỳ {eligibility.PayableProgramSemester}.");
 
             if (!await HasPassedPrerequisitesAsync(studentId, cls.SubjectId))
                 return ServiceResult.Failure($"Bạn chưa hoàn thành môn tiên quyết của {cls.Subject?.Name}.");
@@ -236,6 +249,7 @@ public class EnrollmentService : IEnrollmentService
         SubjectName = e.Class?.Subject?.Name ?? "",
         SemesterId = e.SemesterId,
         SemesterName = e.Semester?.Name ?? "",
+        ProgramSemester = e.Class?.Subject?.ProgramSemester,
         Status = e.Status,
         EnrolledAt = e.EnrolledAt,
         Grade = e.Grade == null ? null : new GradeDto
@@ -256,4 +270,68 @@ public class EnrollmentService : IEnrollmentService
         RoomNumber = e.Class?.RoomNumber,
         TeacherName = e.Class?.Teacher?.FullName ?? ""
     };
+
+    public async Task<EnrollmentEligibilityDto> GetEnrollmentEligibilityAsync(int studentId)
+    {
+        var completedGrades = (await _gradeRepo.GetPublishedByStudentAsync(studentId)).ToList();
+        if (!completedGrades.Any())
+        {
+            return new EnrollmentEligibilityDto
+            {
+                PayableProgramSemester = 1,
+                CanEnroll = true,
+                Message = "Sinh viên mới có thể thanh toán kỳ 1."
+            };
+        }
+
+        var passedProgramSemesters = completedGrades
+            .Where(g => g.IsPassed && g.Enrollment?.Class?.Subject != null)
+            .GroupBy(g => g.Enrollment!.Class.SubjectId)
+            .Select(g => g.OrderByDescending(x => x.Id).First())
+            .GroupBy(g => g.Enrollment!.Class.Subject.ProgramSemester)
+            .ToDictionary(g => g.Key, g => g.Count());
+
+        var allSubjects = (await _subjectRepo.GetAllWithPrerequisitesAsync()).ToList();
+        var requiredCountBySemester = allSubjects
+            .GroupBy(s => s.ProgramSemester)
+            .ToDictionary(g => g.Key, g => g.Count());
+
+        var maxCompletedConsecutiveSemester = 0;
+        for (int semester = 1; semester <= 9; semester++)
+        {
+            var required = requiredCountBySemester.GetValueOrDefault(semester, 0);
+            if (required == 0)
+            {
+                maxCompletedConsecutiveSemester = semester;
+                continue;
+            }
+
+            var passed = passedProgramSemesters.GetValueOrDefault(semester, 0);
+            if (passed >= required)
+            {
+                maxCompletedConsecutiveSemester = semester;
+                continue;
+            }
+
+            break;
+        }
+
+        var payableSemester = Math.Min(maxCompletedConsecutiveSemester + 1, 9);
+        if (maxCompletedConsecutiveSemester >= 9)
+        {
+            return new EnrollmentEligibilityDto
+            {
+                PayableProgramSemester = 9,
+                CanEnroll = false,
+                Message = "Bạn đã hoàn thành toàn bộ chương trình 9 kỳ."
+            };
+        }
+
+        return new EnrollmentEligibilityDto
+        {
+            PayableProgramSemester = payableSemester,
+            CanEnroll = true,
+            Message = $"Sinh viên hiện đủ điều kiện thanh toán các môn kỳ {payableSemester}."
+        };
+    }
 }

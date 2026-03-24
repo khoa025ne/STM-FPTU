@@ -9,6 +9,7 @@ public class SubjectDto
     public decimal Price { get; set; }
     public string? Description { get; set; }
     public bool IsActive { get; set; }
+    public int ProgramSemester { get; set; }
     public List<PrerequisiteDto> Prerequisites { get; set; } = new();
     public List<SubjectClassDto> Classes { get; set; } = new(); // NEW: Classes using this subject
 }
@@ -40,6 +41,7 @@ public class CreateSubjectDto
     public int Credits { get; set; } = 3;
     public decimal Price { get; set; } = 6000000;
     public string? Description { get; set; }
+    public int ProgramSemester { get; set; } = 1;
     public List<int> PrerequisiteSubjectIds { get; set; } = new();
 }
 
@@ -51,5 +53,6 @@ public class UpdateSubjectDto
     public decimal Price { get; set; }
     public string? Description { get; set; }
     public bool IsActive { get; set; }
+    public int ProgramSemester { get; set; } = 1;
     public List<int> PrerequisiteSubjectIds { get; set; } = new();
 }

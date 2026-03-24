@@ -11,4 +11,5 @@ public interface IEnrollmentService
     Task<ServiceResult> DropEnrollmentAsync(int enrollmentId, int studentId);
     Task<bool> HasPassedPrerequisitesAsync(int studentId, int subjectId);
     Task<List<EnrollmentDto>> GetByClassAsync(int classId);
+    Task<EnrollmentEligibilityDto> GetEnrollmentEligibilityAsync(int studentId);
 }
