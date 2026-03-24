@@ -91,6 +91,7 @@ public class AttendanceService : IAttendanceService
 
             if (existing != null)
             {
+                // Update existing record
                 if (!existing.IsEditable) continue;
                 existing.Status = item.Status;
                 existing.Note = item.Note;
@@ -98,10 +99,11 @@ public class AttendanceService : IAttendanceService
             }
             else
             {
-                // Before adding new, delete any other records for same date (cleanup duplicates)
+                // Before adding new, delete any OTHER records for same date with DIFFERENT session (old wrong data)
                 var duplicates = await _context.Attendances
                     .Where(a => a.EnrollmentId == item.EnrollmentId 
-                        && a.SlotDate.Date == dto.Date.Date)
+                        && a.SlotDate.Date == dto.Date.Date
+                        && a.SessionNumber != dto.SessionNumber)  // Only delete different sessions for same date
                     .ToListAsync();
                 
                 if (duplicates.Count > 0)
