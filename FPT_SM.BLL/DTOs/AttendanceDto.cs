@@ -64,3 +64,11 @@ public class StudentAttendanceSummaryDto
     public double AttendanceRate => TotalSessions > 0 ? (double)(PresentCount + LateCount + ExcusedCount) / TotalSessions * 100 : 0;
     public List<AttendanceDto> Sessions { get; set; } = new();
 }
+
+public class AttendanceHistoryDto
+{
+    public DateTime Date { get; set; }
+    public int SessionNumber { get; set; }
+    public string DisplayText => $"Buổi {SessionNumber} - {Date:dd/MM/yyyy}";
+}
+

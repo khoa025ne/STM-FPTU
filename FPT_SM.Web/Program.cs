@@ -44,53 +44,64 @@ app.MapHub<QuizHub>("/hubs/quiz");
 app.MapControllers();
 app.MapRazorPages();
 
-using (var scope = app.Services.CreateScope())
+try
 {
-    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-
-    if (app.Environment.IsDevelopment())
+    using (var scope = app.Services.CreateScope())
     {
-        // Reset database to ensure schema matches current entities
-        await db.Database.EnsureDeletedAsync();
-        await db.Database.EnsureCreatedAsync();
-    }
-    else
-    {
-        // In production, only create if doesn't exist
-        await db.Database.EnsureCreatedAsync();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        if (app.Environment.IsDevelopment())
+        {
+            // Reset database to ensure schema matches current entities
+            await db.Database.EnsureDeletedAsync();
+            await db.Database.EnsureCreatedAsync();
+        }
+        else
+        {
+            // In production, only create if doesn't exist
+            await db.Database.EnsureCreatedAsync();
+        }
+
+        await DbSeeder.SeedAsync(scope.ServiceProvider);
+
+        // ==================== CLEANUP ATTENDANCE DATA ====================
+        // 1. Remove attendance records with invalid dates (year < 2000, typically 0001)
+        var invalidDateAttendances = await db.Attendances
+            .Where(a => a.SlotDate.Year < 2000)
+            .ToListAsync();
+        
+        if (invalidDateAttendances.Count > 0)
+        {
+            Console.WriteLine($"Xoá {invalidDateAttendances.Count} bản ghi điểm danh có ngày không hợp lệ...");
+            db.Attendances.RemoveRange(invalidDateAttendances);
+            await db.SaveChangesAsync();
+            Console.WriteLine("Xoá xong bản ghi ngày không hợp lệ!");
+        }
+
+        // 2. Remove duplicate attendance records (same enrollment + date, keep first/lowest SessionNumber only)
+        var allAttendances = await db.Attendances.ToListAsync();
+        var duplicates = allAttendances
+            .GroupBy(a => new { a.EnrollmentId, a.SlotDate })
+            .Where(g => g.Count() > 1)
+            .SelectMany(g => g.OrderBy(a => a.SessionNumber).Skip(1))
+            .ToList();
+
+        if (duplicates.Count > 0)
+        {
+            Console.WriteLine($"Xoá {duplicates.Count} bản ghi điểm danh trùng lặp...");
+            db.Attendances.RemoveRange(duplicates);
+            await db.SaveChangesAsync();
+            Console.WriteLine("Xoá xong bản ghi trùng lặp!");
+        }
     }
 
-    await DbSeeder.SeedAsync(scope.ServiceProvider);
-
-    // ==================== CLEANUP ATTENDANCE DATA ====================
-    // 1. Remove attendance records with invalid dates (year < 2000, typically 0001)
-    var invalidDateAttendances = await db.Attendances
-        .Where(a => a.SlotDate.Year < 2000)
-        .ToListAsync();
-    
-    if (invalidDateAttendances.Count > 0)
-    {
-        Console.WriteLine($"Xoá {invalidDateAttendances.Count} bản ghi điểm danh có ngày không hợp lệ...");
-        db.Attendances.RemoveRange(invalidDateAttendances);
-        await db.SaveChangesAsync();
-        Console.WriteLine("Xoá xong bản ghi ngày không hợp lệ!");
-    }
-
-    // 2. Remove duplicate attendance records (same enrollment + date, keep first/lowest SessionNumber only)
-    var allAttendances = await db.Attendances.ToListAsync();
-    var duplicates = allAttendances
-        .GroupBy(a => new { a.EnrollmentId, a.SlotDate })
-        .Where(g => g.Count() > 1)
-        .SelectMany(g => g.OrderBy(a => a.SessionNumber).Skip(1))
-        .ToList();
-
-    if (duplicates.Count > 0)
-    {
-        Console.WriteLine($"Xoá {duplicates.Count} bản ghi điểm danh trùng lặp...");
-        db.Attendances.RemoveRange(duplicates);
-        await db.SaveChangesAsync();
-        Console.WriteLine("Xoá xong bản ghi trùng lặp!");
-    }
+    Console.WriteLine("Application initialized successfully!");
+}
+catch (Exception ex)
+{
+    Console.WriteLine($"Error during initialization: {ex.Message}");
+    Console.WriteLine($"StackTrace: {ex.StackTrace}");
+    throw;
 }
 
 app.Run();

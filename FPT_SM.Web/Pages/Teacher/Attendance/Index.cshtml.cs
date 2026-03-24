@@ -58,7 +58,16 @@ public class IndexModel : BasePageModel
 
         if (SelectedClassId.HasValue)
         {
-            var date = DateTime.TryParse(SelectedDate, out var d) ? d : DateTime.Today;
+            // Parse and validate date - use today if invalid or default date
+            var date = DateTime.Today;
+            if (!string.IsNullOrEmpty(SelectedDate) && DateTime.TryParse(SelectedDate, out var parsedDate))
+            {
+                if (parsedDate.Year > 1) // Not default date (0001-01-01)
+                {
+                    date = parsedDate;
+                }
+            }
+            
             AttendanceSheet = await _attendanceService.GetAttendanceSheetAsync(SelectedClassId.Value, date);
             Alerts = await _attendanceService.GetAttendanceAlertsAsync(SelectedClassId.Value);
         }
@@ -128,9 +137,21 @@ public class IndexModel : BasePageModel
         }
 
         // Get the attendance to find classId and date for redirect
-        var tempAttendances = await _attendanceService.GetStudentAttendanceAsync(CurrentUserId!.Value);
-        var firstClassId = tempAttendances.FirstOrDefault()?.EnrollmentId;
+        var attendanceInfo = await _attendanceService.GetAttendanceInfoAsync(EditAttendanceId);
+        
+        if (attendanceInfo.HasValue)
+        {
+            var (classId, slotDate) = attendanceInfo.Value;
+            return RedirectToPage(new { classId = classId, selectedDate = slotDate.ToString("yyyy-MM-dd") });
+        }
 
-        return RedirectToPage(new { classId = firstClassId });
+        // Fallback: redirect to first class
+        var myClasses = await _classService.GetByTeacherAsync(CurrentUserId!.Value);
+        if (myClasses.Any())
+        {
+            return RedirectToPage(new { classId = myClasses.First().Id, selectedDate = DateTime.Today.ToString("yyyy-MM-dd") });
+        }
+
+        return RedirectToPage();
     }
 }

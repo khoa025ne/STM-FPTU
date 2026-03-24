@@ -24,30 +24,45 @@ public class AttendanceService : IAttendanceService
     public async Task<AttendanceSheetDto?> GetAttendanceSheetAsync(int classId, DateTime date)
     {
         var enrollments = await _enrollmentRepo.GetByClassAsync(classId);
-        var activeEnrollments = enrollments.Where(e => e.Status is 2 or 3);
+        var activeEnrollments = enrollments.Where(e => e.Status is 2 or 3).ToList();
         var cls = await _context.Classes.Include(c => c.Subject).Include(c => c.Semester).FirstOrDefaultAsync(c => c.Id == classId);
         if (cls == null) return null;
 
-        // Validate date is within semester range
-        if (cls.Semester != null && (date < cls.Semester.StartDate || date > cls.Semester.EndDate))
+        // Validate date - use today if invalid or default date (0001-01-01)
+        if (date.Year <= 1)
         {
             date = DateTime.Today;
         }
-
-        var sessionNumber = await GetSessionNumberAsync(classId, date);
-        const int TOTAL_SESSIONS = 20;  // Fixed at 20 sessions per semester
         
-        // Cap sessionNumber at totalSessions (prevent going beyond allowed sessions)
-        if (sessionNumber > TOTAL_SESSIONS)
+        // If semester exists, ensure date is within semester bounds
+        if (cls.Semester != null)
         {
-            sessionNumber = TOTAL_SESSIONS;
+            if (date < cls.Semester.StartDate)
+                date = cls.Semester.StartDate;
+            else if (date > cls.Semester.EndDate)
+                date = cls.Semester.EndDate;
+        }
+
+        // Calculate session number based on distinct dates before this date
+        var sessionNumber = await GetSessionNumberAsync(classId, date);
+        
+        // Total sessions should be based on the number of weeks in semester
+        // If semester is defined, calculate based on semester duration, otherwise default to 20
+        int totalSessions = 20; // Default
+        if (cls.Semester != null)
+        {
+            var semesterDays = (cls.Semester.EndDate.Date - cls.Semester.StartDate.Date).Days;
+            // Assuming 1 session per week (divide by 7)
+            totalSessions = Math.Max(1, (semesterDays / 7) + 1);
         }
 
         var items = new List<AttendanceDto>();
 
         foreach (var e in activeEnrollments)
         {
-            var attendance = await _context.Attendances.FirstOrDefaultAsync(a => a.EnrollmentId == e.Id && a.SlotDate.Date == date.Date);
+            var attendance = await _context.Attendances.FirstOrDefaultAsync(a => 
+                a.EnrollmentId == e.Id && a.SlotDate.Date == date.Date && a.SessionNumber == sessionNumber);
+            
             var absentCount = await _attendanceRepo.CountAbsentAsync(e.Id);
             items.Add(new AttendanceDto
             {
@@ -60,7 +75,7 @@ public class AttendanceService : IAttendanceService
                 SessionNumber = sessionNumber,
                 Status = attendance?.Status ?? "Present",
                 Note = attendance?.Note,
-                IsEditable = attendance == null || attendance.IsEditable
+                IsEditable = attendance == null || (DateTime.Now - attendance.SlotDate).TotalDays <= 14
             });
         }
 
@@ -71,7 +86,7 @@ public class AttendanceService : IAttendanceService
             SubjectName = cls.Subject?.Name ?? "",
             Date = date,
             SessionNumber = sessionNumber,
-            TotalSessions = TOTAL_SESSIONS,
+            TotalSessions = totalSessions,
             Attendances = items
         };
     }
@@ -83,6 +98,8 @@ public class AttendanceService : IAttendanceService
 
         var errorCount = 0;
         var successCount = 0;
+        var errors = new List<string>();
+        var enrollmentsToCheckFail = new HashSet<int>(); // Track enrollments that got marked absent
 
         foreach (var item in dto.Items)
         {
@@ -95,34 +112,49 @@ public class AttendanceService : IAttendanceService
                     continue;
                 }
                 
+                // Skip if already failed
                 if (enrollment.Status == 5)
                 {
                     errorCount++;
                     continue;
                 }
 
-                // Check for existing attendance by ONLY date
+                // Check for existing attendance by Date AND SessionNumber (allow multiple sessions same date)
                 var existing = await _context.Attendances
                     .FirstOrDefaultAsync(a => a.EnrollmentId == item.EnrollmentId 
-                        && a.SlotDate.Date == dto.Date.Date);
+                        && a.SlotDate.Date == dto.Date.Date
+                        && a.SessionNumber == dto.SessionNumber);
 
                 if (existing != null)
                 {
-                    // Update existing record
+                    // Update existing record - check if it's still editable (within 14 days)
                     if (!existing.IsEditable)
                     {
                         errorCount++;
+                        var daysOld = (DateTime.Now - existing.SlotDate).Days;
+                        errors.Add($"Không thể sửa: Buổi quá cũ ({daysOld} ngày - tối đa 14 ngày)");
                         continue;
                     }
+                    
+                    // Only track if changing TO absent
+                    if (item.Status == "Absent" && existing.Status != "Absent")
+                    {
+                        enrollmentsToCheckFail.Add(item.EnrollmentId);
+                    }
+                    
                     existing.Status = item.Status;
                     existing.Note = item.Note;
-                    existing.SessionNumber = dto.SessionNumber;
                     _context.Attendances.Update(existing);
                     successCount++;
                 }
                 else
                 {
                     // Create new record
+                    if (item.Status == "Absent")
+                    {
+                        enrollmentsToCheckFail.Add(item.EnrollmentId);
+                    }
+                    
                     _context.Attendances.Add(new Attendance
                     {
                         EnrollmentId = item.EnrollmentId,
@@ -133,33 +165,50 @@ public class AttendanceService : IAttendanceService
                     });
                     successCount++;
                 }
-
-                // Check if student should fail due to absences
-                if (item.Status == "Absent")
-                {
-                    await _context.SaveChangesAsync();
-                    var absentCount = await _attendanceRepo.CountAbsentAsync(item.EnrollmentId);
-                    if (absentCount >= 5 && enrollment.Status != 5)
-                    {
-                        enrollment.Status = 5;
-                        _context.Enrollments.Update(enrollment);
-                    }
-                }
             }
             catch (Exception ex)
             {
                 errorCount++;
+                errors.Add($"Lỗi: {ex.Message}");
                 continue;
+            }
+        }
+
+        // Save all changes first
+        await _context.SaveChangesAsync();
+
+        // Now check and update enrollment status for those with absent >= 5
+        foreach (var enrollmentId in enrollmentsToCheckFail)
+        {
+            var absentCount = await _attendanceRepo.CountAbsentAsync(enrollmentId);
+            if (absentCount >= 5)
+            {
+                var enrollment = await _enrollmentRepo.GetByIdAsync(enrollmentId);
+                if (enrollment != null && enrollment.Status != 5)
+                {
+                    enrollment.Status = 5; // Mark as failed due to absence
+                    _context.Enrollments.Update(enrollment);
+                }
             }
         }
 
         await _context.SaveChangesAsync();
 
+        // Build detailed error message
+        string message = "";
         if (errorCount > 0 && successCount == 0)
-            return ServiceResult.Failure($"Lưu thất bại! {errorCount} sinh viên không thể cập nhật.");
+        {
+            message = "Lưu thất bại! ";
+            if (errors.Count > 0) message += errors.First();
+            return ServiceResult.Failure(message);
+        }
         
         if (errorCount > 0)
-            return ServiceResult.Success($"⚠ Lưu thành công {successCount} sinh viên, {errorCount} sinh viên thất bại");
+        {
+            message = $"⚠ Lưu {successCount} sinh viên, {errorCount} sinh viên thất bại";
+            if (errors.Count > 0) message += $" - {errors.First()}";
+            return ServiceResult.Success(message);
+        }
         
         return ServiceResult.Success($"✓ Đã lưu điểm danh cho {successCount} sinh viên thành công!");
     }
@@ -167,21 +216,42 @@ public class AttendanceService : IAttendanceService
     public async Task<ServiceResult> UpdateAttendanceAsync(int attendanceId, string status, string? note)
     {
         var attendance = await _attendanceRepo.GetByIdAsync(attendanceId);
-        if (attendance == null) return ServiceResult.Failure("Không tìm thấy bản ghi điểm danh.");
-        if (!attendance.IsEditable) return ServiceResult.Failure("Không thể chỉnh sửa điểm danh sau 14 ngày.");
+        if (attendance == null) 
+            return ServiceResult.Failure("Không tìm thấy bản ghi điểm danh.");
+        
+        // Check if it's still editable (within 14 days)
+        var daysOld = (DateTime.Now - attendance.SlotDate).Days;
+        if (daysOld > 14) 
+            return ServiceResult.Failure($"Không thể chỉnh sửa: Buổi quá cũ ({daysOld} ngày - tối đa 14 ngày).");
 
         var oldStatus = attendance.Status;
         attendance.Status = status;
         attendance.Note = note;
         await _attendanceRepo.UpdateAsync(attendance);
 
+        // After updating, check if we need to update enrollment status
+        var enrollment = await _enrollmentRepo.GetByIdAsync(attendance.EnrollmentId);
+        if (enrollment == null)
+            return ServiceResult.Success("Cập nhật điểm danh thành công!");
+
+        // If changing TO "Absent", check if total absent >= 5
         if (status == "Absent" && oldStatus != "Absent")
         {
             var absentCount = await _attendanceRepo.CountAbsentAsync(attendance.EnrollmentId);
-            var enrollment = await _enrollmentRepo.GetByIdAsync(attendance.EnrollmentId);
-            if (absentCount >= 5 && enrollment != null && enrollment.Status != 5)
+            if (absentCount >= 5 && enrollment.Status != 5)
             {
-                enrollment.Status = 5;
+                enrollment.Status = 5; // Mark as failed due to absence
+                await _enrollmentRepo.UpdateAsync(enrollment);
+            }
+        }
+        // If changing FROM "Absent" to something else, check if we should remove failed status
+        else if (oldStatus == "Absent" && status != "Absent")
+        {
+            var absentCount = await _attendanceRepo.CountAbsentAsync(attendance.EnrollmentId);
+            // Only remove failed status if absent count is now < 5
+            if (absentCount < 5 && enrollment.Status == 5)
+            {
+                enrollment.Status = 3; // Change back to active (assuming 3 = active)
                 await _enrollmentRepo.UpdateAsync(enrollment);
             }
         }
@@ -266,6 +336,30 @@ public class AttendanceService : IAttendanceService
         return alerts.OrderByDescending(a => a.AbsentCount).ToList();
     }
 
+    public async Task<List<AttendanceHistoryDto>> GetAttendanceHistoryAsync(int classId)
+    {
+        var attendances = await _context.Attendances
+            .Include(a => a.Enrollment)
+            .Where(a => a.Enrollment.ClassId == classId)
+            .OrderByDescending(a => a.SlotDate)
+            .ThenByDescending(a => a.SessionNumber)
+            .ToListAsync();
+
+        // Get distinct dates and sessions, convert to DTO
+        var history = attendances
+            .GroupBy(a => new { a.SlotDate.Date, a.SessionNumber })
+            .Select(g => new AttendanceHistoryDto 
+            { 
+                Date = g.Key.Date,
+                SessionNumber = g.Key.SessionNumber
+            })
+            .OrderByDescending(h => h.Date)
+            .ThenByDescending(h => h.SessionNumber)
+            .ToList();
+
+        return history;
+    }
+
     private async Task<int> GetSessionNumberAsync(int classId, DateTime date)
     {
         var count = await _context.Attendances
@@ -275,5 +369,19 @@ public class AttendanceService : IAttendanceService
             .Distinct()
             .CountAsync();
         return count + 1;
+    }
+
+    public async Task<(int ClassId, DateTime SlotDate)?> GetAttendanceInfoAsync(int attendanceId)
+    {
+        var attendance = await _context.Attendances
+            .Include(a => a.Enrollment)
+            .Where(a => a.Id == attendanceId)
+            .Select(a => new { a.Enrollment.ClassId, a.SlotDate })
+            .FirstOrDefaultAsync();
+
+        if (attendance == null)
+            return null;
+
+        return (attendance.ClassId, attendance.SlotDate);
     }
 }

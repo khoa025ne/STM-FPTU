@@ -11,4 +11,6 @@ public interface IAttendanceService
     Task<List<StudentAttendanceSummaryDto>> GetStudentAttendanceAsync(int studentId, int? semesterId = null);
     Task<StudentAttendanceSummaryDto?> GetEnrollmentAttendanceAsync(int enrollmentId);
     Task<List<AttendanceAlertDto>> GetAttendanceAlertsAsync(int classId);
+    Task<List<AttendanceHistoryDto>> GetAttendanceHistoryAsync(int classId);
+    Task<(int ClassId, DateTime SlotDate)?> GetAttendanceInfoAsync(int attendanceId);
 }
