@@ -91,7 +91,7 @@
                     <tbody class="divide-y divide-slate-50">
                         @foreach (var cls in data.MyClasses.Take(8))
                         {
-                            <tr class="hover:bg-slate-50 transition-colors cursor-pointer" onclick="window.location='/Teacher/Classes/@cls.Id'">
+                            <tr class="hover:bg-slate-50 transition-colors cursor-pointer" onclick="window.location='/Teacher/Attendance?classId=@cls.Id'">
                                 <td class="px-6 py-3.5">
                                     <p class="font-semibold text-slate-700">@cls.Name</p>
                                     @if (!string.IsNullOrEmpty(cls.RoomNumber))
