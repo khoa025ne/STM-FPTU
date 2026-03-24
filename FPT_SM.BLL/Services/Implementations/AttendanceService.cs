@@ -28,8 +28,21 @@ public class AttendanceService : IAttendanceService
         var cls = await _context.Classes.Include(c => c.Subject).Include(c => c.Semester).Include(c => c.Slot).FirstOrDefaultAsync(c => c.Id == classId);
         if (cls == null) return null;
 
+        // Validate date is within semester range
+        if (date < cls.Semester?.StartDate || date > cls.Semester?.EndDate)
+        {
+            date = DateTime.Today;
+        }
+
         var sessionNumber = await GetSessionNumberAsync(classId, date);
         var totalSessions = CalculateTotalSessions(cls.Semester, cls.Slot);
+        
+        // Cap sessionNumber at totalSessions  (prevent going beyond allowed sessions)
+        if (sessionNumber > totalSessions)
+        {
+            sessionNumber = totalSessions;
+        }
+
         var items = new List<AttendanceDto>();
 
         foreach (var e in activeEnrollments)

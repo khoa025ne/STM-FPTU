@@ -62,8 +62,21 @@ using (var scope = app.Services.CreateScope())
 
     await DbSeeder.SeedAsync(scope.ServiceProvider);
 
-    // ==================== CLEANUP DUPLICATE ATTENDANCES ====================
-    // Remove duplicate attendance records (same enrollment + date, keep first only)
+    // ==================== CLEANUP ATTENDANCE DATA ====================
+    // 1. Remove attendance records with invalid dates (year < 2000, typically 0001)
+    var invalidDateAttendances = await db.Attendances
+        .Where(a => a.SlotDate.Year < 2000)
+        .ToListAsync();
+    
+    if (invalidDateAttendances.Count > 0)
+    {
+        Console.WriteLine($"Xoá {invalidDateAttendances.Count} bản ghi điểm danh có ngày không hợp lệ...");
+        db.Attendances.RemoveRange(invalidDateAttendances);
+        await db.SaveChangesAsync();
+        Console.WriteLine("Xoá xong bản ghi ngày không hợp lệ!");
+    }
+
+    // 2. Remove duplicate attendance records (same enrollment + date, keep first/lowest SessionNumber only)
     var allAttendances = await db.Attendances.ToListAsync();
     var duplicates = allAttendances
         .GroupBy(a => new { a.EnrollmentId, a.SlotDate })
