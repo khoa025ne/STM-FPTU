@@ -304,7 +304,8 @@ public static class DbSeeder
 
             var enrollmentList = new List<Enrollment>();
             var gradeList = new List<Grade>();
-            var attendanceList = new List<Attendance>();
+            // Attendance records are NOT seeded - teacher must mark manually for testing
+
 
             // Enrollment Matrix
             var enrollmentMatrix = new Dictionary<int, List<int>>
@@ -361,30 +362,14 @@ public static class DbSeeder
                 };
                 gradeList.Add(grade);
 
-                // Add 20 attendance records
-                var now = DateTime.Now;
-                for (int i = 1; i <= 20; i++)
-                {
-                    var attendanceStatus = i <= 18 ? "Present" : random.Next(0, 3) switch
-                    {
-                        0 => "Present",
-                        1 => "Absent",
-                        _ => "Late"
-                    };
-
-                    attendanceList.Add(new Attendance
-                    {
-                        EnrollmentId = enrollment.Id,
-                        SlotDate = now.AddDays(-(20 - i) * 7),
-                        SessionNumber = i,
-                        Status = attendanceStatus,
-                        Note = attendanceStatus == "Late" ? "Đến trễ 15 phút" : null
-                    });
-                }
+                // NOTE: Attendance records are NOT seeded here
+                // Teacher must manually create attendance records via the attendance marking page
+                // This allows testing the attendance creation logic
             }
 
             await context.Grades.AddRangeAsync(gradeList);
-            await context.Attendances.AddRangeAsync(attendanceList);
+            // NOT seeding attendance - teacher will mark manually
+            // await context.Attendances.AddRangeAsync(attendanceList);
             await context.SaveChangesAsync();
         }
 

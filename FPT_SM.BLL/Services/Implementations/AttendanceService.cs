@@ -78,54 +78,90 @@ public class AttendanceService : IAttendanceService
 
     public async Task<ServiceResult> MarkAttendanceAsync(MarkAttendanceDto dto, int teacherId)
     {
+        if (dto?.Items == null || dto.Items.Count == 0)
+            return ServiceResult.Failure("Không có dữ liệu điểm danh để lưu!");
+
+        var errorCount = 0;
+        var successCount = 0;
+
         foreach (var item in dto.Items)
         {
-            var enrollment = await _enrollmentRepo.GetByIdAsync(item.EnrollmentId);
-            if (enrollment == null || enrollment.Status == 5) continue;
-
-            // Check for existing attendance by ONLY date (not SessionNumber, since SessionNumber is derived)
-            // One student can only have ONE attendance record per date
-            var existing = await _context.Attendances
-                .FirstOrDefaultAsync(a => a.EnrollmentId == item.EnrollmentId 
-                    && a.SlotDate.Date == dto.Date.Date);
-
-            if (existing != null)
+            try
             {
-                // Update existing record (even if you save the same date multiple times)
-                if (!existing.IsEditable) continue;
-                existing.Status = item.Status;
-                existing.Note = item.Note;
-                existing.SessionNumber = dto.SessionNumber;  // Update session number too
-                _context.Attendances.Update(existing);
-            }
-            else
-            {
-                // Create new record (no need to delete old ones, as each date has only one record per student)
-                _context.Attendances.Add(new Attendance
+                var enrollment = await _enrollmentRepo.GetByIdAsync(item.EnrollmentId);
+                if (enrollment == null)
                 {
-                    EnrollmentId = item.EnrollmentId,
-                    SlotDate = dto.Date,
-                    SessionNumber = dto.SessionNumber,
-                    Status = item.Status,
-                    Note = item.Note
-                });
-            }
-
-            // Check if student should fail due to absences
-            if (item.Status == "Absent")
-            {
-                await _context.SaveChangesAsync();
-                var absentCount = await _attendanceRepo.CountAbsentAsync(item.EnrollmentId);
-                if (absentCount >= 5 && enrollment.Status != 5)
-                {
-                    enrollment.Status = 5;
-                    _context.Enrollments.Update(enrollment);
+                    errorCount++;
+                    continue;
                 }
+                
+                if (enrollment.Status == 5)
+                {
+                    errorCount++;
+                    continue;
+                }
+
+                // Check for existing attendance by ONLY date
+                var existing = await _context.Attendances
+                    .FirstOrDefaultAsync(a => a.EnrollmentId == item.EnrollmentId 
+                        && a.SlotDate.Date == dto.Date.Date);
+
+                if (existing != null)
+                {
+                    // Update existing record
+                    if (!existing.IsEditable)
+                    {
+                        errorCount++;
+                        continue;
+                    }
+                    existing.Status = item.Status;
+                    existing.Note = item.Note;
+                    existing.SessionNumber = dto.SessionNumber;
+                    _context.Attendances.Update(existing);
+                    successCount++;
+                }
+                else
+                {
+                    // Create new record
+                    _context.Attendances.Add(new Attendance
+                    {
+                        EnrollmentId = item.EnrollmentId,
+                        SlotDate = dto.Date,
+                        SessionNumber = dto.SessionNumber,
+                        Status = item.Status,
+                        Note = item.Note
+                    });
+                    successCount++;
+                }
+
+                // Check if student should fail due to absences
+                if (item.Status == "Absent")
+                {
+                    await _context.SaveChangesAsync();
+                    var absentCount = await _attendanceRepo.CountAbsentAsync(item.EnrollmentId);
+                    if (absentCount >= 5 && enrollment.Status != 5)
+                    {
+                        enrollment.Status = 5;
+                        _context.Enrollments.Update(enrollment);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                errorCount++;
+                continue;
             }
         }
 
         await _context.SaveChangesAsync();
-        return ServiceResult.Success("Điểm danh đã được lưu thành công!");
+
+        if (errorCount > 0 && successCount == 0)
+            return ServiceResult.Failure($"Lưu thất bại! {errorCount} sinh viên không thể cập nhật.");
+        
+        if (errorCount > 0)
+            return ServiceResult.Success($"⚠ Lưu thành công {successCount} sinh viên, {errorCount} sinh viên thất bại");
+        
+        return ServiceResult.Success($"✓ Đã lưu điểm danh cho {successCount} sinh viên thành công!");
     }
 
     public async Task<ServiceResult> UpdateAttendanceAsync(int attendanceId, string status, string? note)

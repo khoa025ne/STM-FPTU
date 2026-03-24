@@ -35,6 +35,15 @@ public class IndexModel : BasePageModel
     [BindProperty]
     public MarkAttendanceDto Dto { get; set; } = new();
 
+    [BindProperty]
+    public int EditAttendanceId { get; set; }
+    
+    [BindProperty]
+    public string EditStatus { get; set; } = "Present";
+    
+    [BindProperty]
+    public string? EditNote { get; set; }
+
     public async Task<IActionResult> OnGetAsync()
     {
         var auth = RequireRole("Teacher");
@@ -94,5 +103,34 @@ public class IndexModel : BasePageModel
         }
 
         return RedirectToPage(new { classId = Dto.ClassId, selectedDate = Dto.Date.ToString("yyyy-MM-dd") });
+    }
+
+    public async Task<IActionResult> OnPostUpdateAttendanceAsync()
+    {
+        var auth = RequireRole("Teacher");
+        if (auth != null) return auth;
+
+        var result = await _attendanceService.UpdateAttendanceAsync(EditAttendanceId, EditStatus, EditNote);
+
+        if (result.IsSuccess)
+        {
+            await _attendanceHub.Clients.Group("students").SendAsync("AttendanceUpdated", new
+            {
+                attendanceId = EditAttendanceId,
+                message = "Điểm danh của bạn đã được cập nhật"
+            });
+
+            TempData["Success"] = result.Message;
+        }
+        else
+        {
+            TempData["Error"] = result.Message;
+        }
+
+        // Get the attendance to find classId and date for redirect
+        var tempAttendances = await _attendanceService.GetStudentAttendanceAsync(CurrentUserId!.Value);
+        var firstClassId = tempAttendances.FirstOrDefault()?.EnrollmentId;
+
+        return RedirectToPage(new { classId = firstClassId });
     }
 }
