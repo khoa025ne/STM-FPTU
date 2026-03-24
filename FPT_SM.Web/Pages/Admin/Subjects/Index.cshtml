@@ -5,6 +5,44 @@
     ViewData["Title"] = "Quản lý Môn học";
 }
 
+<style>
+    .subjects-shell .panel {
+        background: #fff;
+        border: 1px solid #e2e8f0;
+        border-radius: 18px;
+        box-shadow: 0 10px 24px rgba(2, 6, 23, 0.05);
+    }
+
+    .subjects-shell .table-head {
+        background: #f8fafc;
+    }
+
+    .subjects-shell .subject-row:hover {
+        background: #f8fafc;
+    }
+
+    .col-code { min-width: 100px; }
+    .col-name { min-width: 240px; }
+    .col-credits { min-width: 74px; }
+    .col-semester { min-width: 88px; white-space: nowrap; }
+    .col-fee { min-width: 130px; white-space: nowrap; }
+    .col-prereq { min-width: 160px; }
+    .col-usage { min-width: 220px; }
+    .col-status { min-width: 110px; white-space: nowrap; }
+    .col-actions { min-width: 150px; white-space: nowrap; }
+
+    html.theme-mystic .subjects-shell .panel {
+        background: rgba(17, 24, 39, 0.82);
+        border-color: rgba(71, 85, 105, 0.6);
+        box-shadow: 0 8px 30px rgba(2, 6, 23, 0.45);
+    }
+
+    html.theme-mystic .subjects-shell .table-head,
+    html.theme-mystic .subjects-shell .subject-row:hover {
+        background: rgba(30, 41, 59, 0.5);
+    }
+</style>
+
 @if (TempData["Success"] != null)
 {
     <div id="tempSuccessMsg" class="hidden">@TempData["Success"]</div>
@@ -14,21 +52,24 @@
     <div id="tempErrorMsg" class="hidden">@TempData["Error"]</div>
 }
 
+<div class="subjects-shell space-y-5">
+
 <!-- Page Header -->
-<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6" data-aos="fade-down">
+<div class="panel p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4" data-aos="fade-down">
     <div>
+        <p class="text-xs uppercase tracking-wider text-slate-500 font-semibold">Catalog Management</p>
         <h2 class="text-2xl font-black text-fpt-navy">Quản lý Môn học</h2>
-        <p class="text-slate-500 text-sm mt-1">Quản lý danh sách môn học trong hệ thống</p>
+        <p class="text-slate-500 text-sm mt-1">Danh mục môn học, kỳ chương trình, tiên quyết và sử dụng theo lớp</p>
     </div>
     <a href="/Admin/Subjects/Create"
-       class="inline-flex items-center gap-2 bg-fpt-orange hover:bg-orange-500 text-white font-semibold px-5 py-2.5 rounded-xl text-sm transition-all hover:shadow-lg">
+       class="inline-flex items-center gap-2 bg-fpt-orange hover:bg-orange-500 text-white font-semibold px-5 py-2.5 rounded-xl text-sm transition-all">
         <i data-lucide="plus" class="w-4 h-4"></i>
         Thêm môn học
     </a>
 </div>
 
 <!-- Stats -->
-<div class="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-5" data-aos="fade-up" data-aos-delay="50">
+<div class="grid grid-cols-2 sm:grid-cols-3 gap-3" data-aos="fade-up" data-aos-delay="50">
     <div class="bg-gradient-to-br from-fpt-navy to-blue-800 rounded-xl p-4 text-white">
         <p class="text-xs text-blue-200 mb-1">Tổng môn học</p>
         <p class="text-3xl font-black">@Model.Subjects.Count</p>
@@ -44,7 +85,7 @@
 </div>
 
 <!-- Search Bar -->
-<div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 mb-4" data-aos="fade-up" data-aos-delay="80">
+<div class="panel p-4" data-aos="fade-up" data-aos-delay="80">
     <div class="flex gap-3">
         <div class="flex-1 relative">
             <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400"></i>
@@ -58,7 +99,7 @@
 </div>
 
 <!-- Table -->
-<div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden" data-aos="fade-up" data-aos-delay="100">
+<div class="panel overflow-hidden" data-aos="fade-up" data-aos-delay="100">
     <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
         <h3 class="font-bold text-slate-800">Danh sách môn học</h3>
         <span class="text-sm text-slate-400" id="subjectCount">@Model.Subjects.Count môn học</span>
@@ -94,17 +135,17 @@
         else
         {
             <table class="w-full text-sm" id="subjectsTable">
-                <thead class="bg-slate-50 text-slate-500 text-xs font-semibold uppercase tracking-wider">
+                <thead class="table-head text-slate-500 text-xs font-semibold uppercase tracking-wider">
                     <tr>
-                        <th class="px-5 py-3.5 text-left">Mã môn</th>
-                        <th class="px-5 py-3.5 text-left">Tên môn học</th>
-                        <th class="px-5 py-3.5 text-left">Tín chỉ</th>
-                        <th class="px-5 py-3.5 text-left">Kỳ CT</th>
-                        <th class="px-5 py-3.5 text-left">Học phí</th>
-                        <th class="px-5 py-3.5 text-left">Môn tiên quyết</th>
-                        <th class="px-5 py-3.5 text-left">Dùng cho lớp/kì</th>
-                        <th class="px-5 py-3.5 text-left">Trạng thái</th>
-                        <th class="px-5 py-3.5 text-right">Thao tác</th>
+                        <th class="px-5 py-3.5 text-left col-code">Mã môn</th>
+                        <th class="px-5 py-3.5 text-left col-name">Tên môn học</th>
+                        <th class="px-5 py-3.5 text-left col-credits">Tín chỉ</th>
+                        <th class="px-5 py-3.5 text-left col-semester">Kỳ CT</th>
+                        <th class="px-5 py-3.5 text-left col-fee">Học phí</th>
+                        <th class="px-5 py-3.5 text-left col-prereq">Môn tiên quyết</th>
+                        <th class="px-5 py-3.5 text-left col-usage">Dùng cho lớp/kì</th>
+                        <th class="px-5 py-3.5 text-left col-status">Trạng thái</th>
+                        <th class="px-5 py-3.5 text-right col-actions">Thao tác</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-50" id="subjectRows">
@@ -113,26 +154,26 @@
                         <tr class="hover:bg-slate-50 transition-colors subject-row"
                             data-name="@sub.Name.ToLower()"
                             data-code="@sub.Code.ToLower()">
-                            <td class="px-5 py-3.5">
+                            <td class="px-5 py-3.5 col-code">
                                 <span class="text-xs font-mono bg-fpt-navy/10 text-fpt-navy px-2.5 py-1 rounded font-semibold">@sub.Code</span>
                             </td>
-                            <td class="px-5 py-3.5 font-semibold text-slate-800">
+                            <td class="px-5 py-3.5 font-semibold text-slate-800 col-name">
                                 @sub.Name
                                 @if (!string.IsNullOrEmpty(sub.Description))
                                 {
                                     <p class="text-xs text-slate-400 font-normal mt-0.5 truncate max-w-xs">@sub.Description</p>
                                 }
                             </td>
-                            <td class="px-5 py-3.5">
+                            <td class="px-5 py-3.5 col-credits">
                                 <span class="inline-flex items-center justify-center w-7 h-7 rounded-full bg-sky-100 text-sky-700 text-xs font-bold">@sub.Credits</span>
                             </td>
-                            <td class="px-5 py-3.5">
+                            <td class="px-5 py-3.5 col-semester whitespace-nowrap">
                                 <span class="inline-flex items-center justify-center px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-600 text-xs font-bold">Kỳ @sub.ProgramSemester</span>
                             </td>
-                            <td class="px-5 py-3.5 text-slate-700 font-medium">
+                            <td class="px-5 py-3.5 text-slate-700 font-medium col-fee whitespace-nowrap">
                                 @sub.Price.ToString("N0") VNĐ
                             </td>
-                            <td class="px-5 py-3.5">
+                            <td class="px-5 py-3.5 col-prereq">
                                 @if (sub.Prerequisites.Any())
                                 {
                                     <div class="flex flex-wrap gap-1">
@@ -147,7 +188,7 @@
                                     <span class="text-slate-300 text-xs">Không có</span>
                                 }
                             </td>
-                            <td class="px-5 py-3.5">
+                            <td class="px-5 py-3.5 col-usage">
                                 @if (sub.Classes.Any())
                                 {
                                     <div class="flex flex-wrap gap-1.5">
@@ -165,7 +206,7 @@
                                     <span class="text-slate-300 text-xs italic">Chưa dùng</span>
                                 }
                             </td>
-                            <td class="px-5 py-3.5">
+                            <td class="px-5 py-3.5 col-status whitespace-nowrap">
                                 @if (sub.IsActive)
                                 {
                                     <span class="inline-flex items-center gap-1.5 text-xs font-semibold text-teal-700 bg-teal-100 px-2.5 py-1 rounded-full">
@@ -179,7 +220,7 @@
                                     </span>
                                 }
                             </td>
-                            <td class="px-5 py-3.5">
+                            <td class="px-5 py-3.5 col-actions">
                                 <div class="flex items-center justify-end gap-1.5">
                                     <a href="/Admin/Subjects/Edit?id=@sub.Id"
                                        class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold bg-sky-100 text-sky-700 hover:bg-sky-200 transition-colors">
@@ -198,6 +239,7 @@
             </table>
         }
     </div>
+</div>
 </div>
 
 <!-- Modal Thêm / Sửa môn học -->

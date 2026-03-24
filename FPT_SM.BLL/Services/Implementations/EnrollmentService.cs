@@ -275,7 +275,10 @@ public class EnrollmentService : IEnrollmentService
         StartTime = e.Class?.Slot?.StartTime ?? TimeSpan.Zero,
         EndTime = e.Class?.Slot?.EndTime ?? TimeSpan.Zero,
         RoomNumber = e.Class?.RoomNumber,
-        TeacherName = e.Class?.Teacher?.FullName ?? ""
+        TeacherName = e.Class?.Teacher?.FullName ?? "",
+        SlotDayOfWeek = e.Class?.Slot?.DayOfWeek ?? 0,
+        SemesterStartDate = e.Semester?.StartDate ?? DateTime.MinValue,
+        SemesterEndDate = e.Semester?.EndDate ?? DateTime.MinValue
     };
 
     public async Task<EnrollmentEligibilityDto> GetEnrollmentEligibilityAsync(int studentId)

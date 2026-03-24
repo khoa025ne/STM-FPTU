@@ -1,6 +1,7 @@
 using FPT_SM.BLL.DTOs;
 using FPT_SM.BLL.Services.Interfaces;
 using FPT_SM.Web.Hubs;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 
@@ -11,12 +12,14 @@ public class IndexModel : BasePageModel
     private readonly IQuizService _quizService;
     private readonly IClassService _classService;
     private readonly IHubContext<QuizHub> _quizHub;
+    private readonly IHubContext<NotificationHub> _notificationHub;
 
-    public IndexModel(IQuizService quizService, IClassService classService, IHubContext<QuizHub> quizHub)
+    public IndexModel(IQuizService quizService, IClassService classService, IHubContext<QuizHub> quizHub, IHubContext<NotificationHub> notificationHub)
     {
         _quizService = quizService;
         _classService = classService;
         _quizHub = quizHub;
+        _notificationHub = notificationHub;
     }
 
     public List<ClassDto> MyClasses { get; set; } = new();
@@ -63,12 +66,58 @@ public class IndexModel : BasePageModel
                 endTime = CreateDto.EndTime,
                 message = "Giáo viên vừa tạo quiz mới!"
             });
+
+            var roles = new[] { "admin_all", "manager_all", "teacher_all", "student_all" };
+            foreach (var role in roles)
+            {
+                await _notificationHub.Clients.Group(role).SendAsync("EntityChanged", new
+                {
+                    entity = "Quiz",
+                    action = "create",
+                    classId = CreateDto.ClassId,
+                    quizId = result.Data?.Id ?? 0
+                });
+            }
+
             TempData["Success"] = result.Message;
         }
         else
             TempData["Error"] = result.Message;
 
         return RedirectToPage(new { classId = CreateDto.ClassId });
+    }
+
+    public async Task<IActionResult> OnPostGenerateWithAiAsync([FromBody] GenerateQuizFromTextDto dto)
+    {
+        var auth = RequireRole("Teacher");
+        if (auth != null) return auth;
+
+        if (dto == null)
+            return new JsonResult(new { isSuccess = false, message = "Dữ liệu không hợp lệ." })
+            {
+                StatusCode = StatusCodes.Status400BadRequest
+            };
+
+        var myClasses = await _classService.GetByTeacherAsync(CurrentUserId!.Value);
+        if (!myClasses.Any(x => x.Id == dto.ClassId))
+            return new JsonResult(new { isSuccess = false, message = "Bạn không có quyền tạo quiz cho lớp này." })
+            {
+                StatusCode = StatusCodes.Status403Forbidden
+            };
+
+        var result = await _quizService.GenerateDraftFromTextAsync(dto);
+        if (!result.IsSuccess)
+            return new JsonResult(new { isSuccess = false, message = result.Message })
+            {
+                StatusCode = StatusCodes.Status400BadRequest
+            };
+
+        return new JsonResult(new
+        {
+            isSuccess = true,
+            message = result.Message,
+            data = result.Data
+        });
     }
 
     public async Task<IActionResult> OnPostPublishAsync(int quizId, int classId)
@@ -86,6 +135,19 @@ public class IndexModel : BasePageModel
                 title = result.Data?.Title,
                 message = "Quiz mới đã được công bố!"
             });
+
+            var roles = new[] { "admin_all", "manager_all", "teacher_all", "student_all" };
+            foreach (var role in roles)
+            {
+                await _notificationHub.Clients.Group(role).SendAsync("EntityChanged", new
+                {
+                    entity = "Quiz",
+                    action = "publish",
+                    classId,
+                    quizId
+                });
+            }
+
             TempData["Success"] = result.Message;
         }
         else
@@ -112,6 +174,19 @@ public class IndexModel : BasePageModel
                 classId,
                 message = "Quiz đã bị xóa"
             });
+
+            var roles = new[] { "admin_all", "manager_all", "teacher_all", "student_all" };
+            foreach (var role in roles)
+            {
+                await _notificationHub.Clients.Group(role).SendAsync("EntityChanged", new
+                {
+                    entity = "Quiz",
+                    action = "delete",
+                    classId,
+                    quizId
+                });
+            }
+
             TempData["Success"] = result.Message;
         }
         else

@@ -58,8 +58,12 @@ public class IndexModel : BasePageModel
         if (result.IsSuccess)
         {
             TempData["Success"] = result.Message ?? "Đã phê duyệt lớp học.";
-            await _hubContext.Clients.Group("admin_all").SendAsync("ClassUpdated", new { action = "approve", data = result.Data });
-            await _hubContext.Clients.Group("manager_all").SendAsync("ClassUpdated", new { action = "approve", data = result.Data });
+            var groups = new[] { "admin_all", "manager_all", "teacher_all", "student_all" };
+            foreach (var group in groups)
+            {
+                await _hubContext.Clients.Group(group).SendAsync("ClassUpdated", new { action = "approve", data = result.Data });
+                await _hubContext.Clients.Group(group).SendAsync("EntityChanged", new { entity = "Class", action = "approve", id, data = result.Data });
+            }
             await _hubContext.Clients.Group($"class_{id}").SendAsync("ClassApproved", new { id, action = "approve" });
         }
         else
@@ -78,8 +82,12 @@ public class IndexModel : BasePageModel
         if (result.IsSuccess)
         {
             TempData["Success"] = result.Message ?? "Đã hủy lớp học.";
-            await _hubContext.Clients.Group("admin_all").SendAsync("ClassUpdated", new { action = "cancel", data = result.Data });
-            await _hubContext.Clients.Group("manager_all").SendAsync("ClassUpdated", new { action = "cancel", data = result.Data });
+            var groups = new[] { "admin_all", "manager_all", "teacher_all", "student_all" };
+            foreach (var group in groups)
+            {
+                await _hubContext.Clients.Group(group).SendAsync("ClassUpdated", new { action = "cancel", data = result.Data });
+                await _hubContext.Clients.Group(group).SendAsync("EntityChanged", new { entity = "Class", action = "cancel", id, data = result.Data });
+            }
             await _hubContext.Clients.Group($"class_{id}").SendAsync("ClassApproved", new { id, action = "cancel" });
         }
         else

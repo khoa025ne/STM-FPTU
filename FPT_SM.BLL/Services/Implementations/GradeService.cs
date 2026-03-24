@@ -43,8 +43,6 @@ public class GradeService : IGradeService
             .Where(e => e.ClassId == classId && e.Status != 4)
             .ToListAsync();
 
-        System.Console.WriteLine($"[DEBUG] ClassId={classId}, Enrollments count={enrollments.Count}");
-
         foreach (var enrollment in enrollments)
         {
             var existingGrade = await _context.Grades
@@ -52,7 +50,6 @@ public class GradeService : IGradeService
 
             if (existingGrade == null)
             {
-                System.Console.WriteLine($"[DEBUG] Creating missing grade for enrollment {enrollment.Id}");
                 _context.Grades.Add(new Grade
                 {
                     EnrollmentId = enrollment.Id,
@@ -64,8 +61,6 @@ public class GradeService : IGradeService
 
         var grades = await _gradeRepo.GetByClassAsync(classId);
         var gradeDtos = grades.Select(g => MapToDto(g)).ToList();
-
-        System.Console.WriteLine($"[DEBUG] Final grades count={gradeDtos.Count}");
 
         return new GradeSheetDto
         {
@@ -87,10 +82,32 @@ public class GradeService : IGradeService
     {
         var grade = await _gradeRepo.GetByIdAsync(dto.GradeId);
         if (grade == null) return ServiceResult<GradeDto>.Failure("Không tìm thấy điểm.");
-        if (grade.Status == 2) return ServiceResult<GradeDto>.Failure("Không thể chỉnh sửa điểm đã công bố.");
+
+        var enrollment = await _context.Enrollments
+            .Include(e => e.Class)
+            .FirstOrDefaultAsync(e => e.Id == grade.EnrollmentId);
+
+        if (enrollment?.Class == null)
+            return ServiceResult<GradeDto>.Failure("Không tìm thấy thông tin lớp học của điểm này.");
+
+        if (enrollment.Class.TeacherId != teacherId)
+            return ServiceResult<GradeDto>.Failure("Bạn không có quyền chấm điểm cho lớp này.");
+
+        if (grade.Status == 2)
+            return ServiceResult<GradeDto>.Failure("Điểm đã công bố. Hãy bấm 'Mở chấm lại' để chỉnh sửa.");
+
+        if (dto.MidtermScore.HasValue && (dto.MidtermScore < 0 || dto.MidtermScore > 10))
+            return ServiceResult<GradeDto>.Failure("Điểm giữa kỳ phải trong khoảng từ 0 đến 10.");
+
+        if (dto.FinalScore.HasValue && (dto.FinalScore < 0 || dto.FinalScore > 10))
+            return ServiceResult<GradeDto>.Failure("Điểm cuối kỳ phải trong khoảng từ 0 đến 10.");
 
         grade.MidtermScore = dto.MidtermScore;
         grade.FinalScore = dto.FinalScore;
+        if (grade.Status == 0)
+        {
+            grade.Status = 1;
+        }
 
         if (dto.MidtermScore.HasValue && dto.FinalScore.HasValue)
         {
@@ -106,9 +123,22 @@ public class GradeService : IGradeService
 
     public async Task<ServiceResult> PublishGradesAsync(int classId, int teacherId)
     {
+        var cls = await _context.Classes.FirstOrDefaultAsync(c => c.Id == classId);
+        if (cls == null)
+            return ServiceResult.Failure("Không tìm thấy lớp học.");
+
+        if (cls.TeacherId != teacherId)
+            return ServiceResult.Failure("Bạn không có quyền công bố điểm của lớp này.");
+
         var grades = await _gradeRepo.GetByClassAsync(classId);
         var gradeList = grades.ToList();
         if (!gradeList.Any()) return ServiceResult.Failure("Không có điểm để công bố.");
+
+        var incompleteCount = gradeList.Count(g => !g.MidtermScore.HasValue || !g.FinalScore.HasValue);
+        if (incompleteCount > 0)
+        {
+            return ServiceResult.Failure($"Còn {incompleteCount} sinh viên chưa nhập đủ điểm giữa kỳ/cuối kỳ.");
+        }
 
         foreach (var grade in gradeList)
         {
@@ -118,6 +148,34 @@ public class GradeService : IGradeService
         }
 
         return ServiceResult.Success($"Đã công bố {gradeList.Count} điểm thành công!");
+    }
+
+    public async Task<ServiceResult> ReopenGradesAsync(int classId, int teacherId)
+    {
+        var cls = await _context.Classes.FirstOrDefaultAsync(c => c.Id == classId);
+        if (cls == null)
+            return ServiceResult.Failure("Không tìm thấy lớp học.");
+
+        if (cls.TeacherId != teacherId)
+            return ServiceResult.Failure("Bạn không có quyền mở lại điểm của lớp này.");
+
+        var grades = (await _gradeRepo.GetByClassAsync(classId)).ToList();
+        if (!grades.Any())
+            return ServiceResult.Failure("Không có điểm để mở lại.");
+
+        var reopened = 0;
+        foreach (var grade in grades.Where(g => g.Status == 2))
+        {
+            grade.Status = 3;
+            grade.PublishedAt = null;
+            await _gradeRepo.UpdateAsync(grade);
+            reopened++;
+        }
+
+        if (reopened == 0)
+            return ServiceResult.Success("Lớp này đang ở trạng thái có thể chỉnh sửa.");
+
+        return ServiceResult.Success($"Đã mở chấm lại {reopened} bản ghi điểm.");
     }
 
     public async Task<ServiceResult<AcademicAnalysisDto>> AnalyzeWithAIAsync(AnalyzeGradeDto dto)

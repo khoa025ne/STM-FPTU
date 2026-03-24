@@ -102,6 +102,19 @@
                                 Phân tích AI
                             </button>
                         </form>
+                        @if (sheet.Grades.Any(g => g.Status == 2))
+                        {
+                                <form method="post" asp-page-handler="ReopenGrades" class="inline"
+                                    onsubmit="return confirmReopen(this);">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="classId" value="@sheet.ClassId" />
+                                <button type="submit"
+                                        class="flex items-center gap-2 bg-amber-500 hover:bg-amber-600 text-white text-sm font-bold px-4 py-2 rounded-xl transition-all shadow-sm">
+                                    <i data-lucide="unlock" class="w-4 h-4"></i>
+                                    Mở chấm lại
+                                </button>
+                            </form>
+                        }
                         <button type="button" onclick="confirmPublish(@sheet.ClassId)"
                                 class="flex items-center gap-2 bg-fpt-orange hover:bg-orange-600 text-white text-sm font-bold px-4 py-2 rounded-xl transition-all shadow-sm">
                             <i data-lucide="send" class="w-4 h-4"></i>
@@ -285,6 +298,25 @@
             return false;
         }
         return true;
+    }
+
+    function confirmReopen(form) {
+        Swal.fire({
+            title: 'Mở chấm lại?',
+            html: '<p class="text-gray-600">Điểm đã công bố sẽ chuyển sang trạng thái <strong>Đánh giá lại</strong> để có thể chỉnh sửa.</p>',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#F59E0B',
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: 'Mở chấm lại',
+            cancelButtonText: 'Hủy',
+            reverseButtons: true
+        }).then(result => {
+            if (result.isConfirmed) {
+                form.submit();
+            }
+        });
+        return false;
     }
 
     // Auto-calculate GPA on score change

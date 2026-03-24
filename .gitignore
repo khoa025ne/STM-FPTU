@@ -26,6 +26,7 @@ obj/
 .env.*.local
 appsettings.Development.json
 appsettings.Production.json
+**/appsettings.Local.json
 
 # Node & npm
 node_modules/

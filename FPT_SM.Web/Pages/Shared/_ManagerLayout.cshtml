@@ -102,6 +102,28 @@
 <script>
     AOS.init({ duration: 600, once: true });
     lucide.createIcons();
+
+    // Manager SignalR connection
+    (async function() {
+        try {
+            const userId = @(ViewData["UserId"] ?? 0);
+            const conn = await signalRManager.connect('notification', '/hubs/notification');
+            const groups = [`manager_${userId}`, 'manager_all'];
+            await signalRManager.joinGroups(conn, groups);
+            conn.onreconnected(async () => {
+                await signalRManager.joinGroups(conn, groups);
+            });
+
+            conn.on('NewNotification', data => {
+                showToast(data.title || data.message || 'Thong bao moi', 'info');
+            });
+
+            signalRManager.bindAutoRefresh(conn, {
+                events: ['EntityChanged', 'UserUpdated', 'ClassUpdated', 'SubjectUpdated', 'SemesterUpdated'],
+                message: 'Du lieu he thong vua duoc cap nhat'
+            });
+        } catch(e) { console.warn('SignalR not connected', e); }
+    })();
 </script>
 @RenderSection("Scripts", required: false)
 </body>

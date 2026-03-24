@@ -91,19 +91,26 @@ public class CreateModel : BasePageModel
             return Page();
         }
 
-        await _hubContext.Clients.Group("admin_all").SendAsync("ClassUpdated", new
+        var createdClassId = result.Data?.Id ?? 0;
+        var createdClassCode = result.Data?.Name;
+        var groups = new[] { "admin_all", "manager_all", "teacher_all", "student_all" };
+        foreach (var group in groups)
         {
-            id = result.Data?.Id ?? 0,
-            action = "create",
-            classCode = result.Data?.Name
-        });
+            await _hubContext.Clients.Group(group).SendAsync("ClassUpdated", new
+            {
+                id = createdClassId,
+                action = "create",
+                classCode = createdClassCode
+            });
 
-        await _hubContext.Clients.Group("manager_all").SendAsync("ClassUpdated", new
-        {
-            id = result.Data?.Id ?? 0,
-            action = "create",
-            classCode = result.Data?.Name
-        });
+            await _hubContext.Clients.Group(group).SendAsync("EntityChanged", new
+            {
+                entity = "Class",
+                action = "create",
+                id = createdClassId,
+                classCode = createdClassCode
+            });
+        }
 
         TempData["Success"] = $"Đã tạo lớp học <b>{CreateDto.Name}</b> thành công!";
         return RedirectToPage("/Admin/Classes/Index");

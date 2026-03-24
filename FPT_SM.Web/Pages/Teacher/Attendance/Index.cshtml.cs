@@ -11,15 +11,18 @@ public class IndexModel : BasePageModel
     private readonly IAttendanceService _attendanceService;
     private readonly IClassService _classService;
     private readonly IHubContext<AttendanceHub> _attendanceHub;
+    private readonly IHubContext<NotificationHub> _notificationHub;
 
     public IndexModel(
         IAttendanceService attendanceService,
         IClassService classService,
-        IHubContext<AttendanceHub> attendanceHub)
+        IHubContext<AttendanceHub> attendanceHub,
+        IHubContext<NotificationHub> notificationHub)
     {
         _attendanceService = attendanceService;
         _classService = classService;
         _attendanceHub = attendanceHub;
+        _notificationHub = notificationHub;
     }
 
     public List<ClassDto> MyClasses { get; set; } = new();
@@ -128,6 +131,19 @@ public class IndexModel : BasePageModel
                 });
             }
 
+            var roles = new[] { "admin_all", "manager_all", "teacher_all", "student_all" };
+            foreach (var role in roles)
+            {
+                await _notificationHub.Clients.Group(role).SendAsync("EntityChanged", new
+                {
+                    entity = "Attendance",
+                    action = "save",
+                    classId = Dto.ClassId,
+                    sessionNumber = Dto.SessionNumber,
+                    date = Dto.Date.ToString("yyyy-MM-dd")
+                });
+            }
+
             var alerts = await _attendanceService.GetAttendanceAlertsAsync(Dto.ClassId);
             foreach (var student in alerts.Where(a => a.IsFailed))
             {
@@ -174,6 +190,20 @@ public class IndexModel : BasePageModel
                     date = slotDate.ToString("yyyy-MM-dd"),
                     message = "Điểm danh của bạn đã được cập nhật"
                 });
+
+                var roles = new[] { "admin_all", "manager_all", "teacher_all", "student_all" };
+                foreach (var role in roles)
+                {
+                    await _notificationHub.Clients.Group(role).SendAsync("EntityChanged", new
+                    {
+                        entity = "Attendance",
+                        action = "update",
+                        classId,
+                        studentId,
+                        sessionNumber,
+                        date = slotDate.ToString("yyyy-MM-dd")
+                    });
+                }
             }
 
             TempData["Success"] = result.Message;

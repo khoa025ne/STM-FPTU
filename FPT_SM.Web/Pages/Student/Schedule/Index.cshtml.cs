@@ -18,11 +18,17 @@ public class IndexModel : BasePageModel
     }
 
     public List<EnrollmentDto> MyEnrollments { get; set; } = new();
+    public List<WeeklyScheduleSessionDto> WeeklySessions { get; set; } = new();
     public List<SemesterDto> Semesters { get; set; } = new();
     public SemesterDto? SelectedSemester { get; set; }
+    public DateTime WeekStartDate { get; set; }
+    public DateTime WeekEndDate { get; set; }
 
     [BindProperty(SupportsGet = true)]
     public int? SemesterId { get; set; }
+
+    [BindProperty(SupportsGet = true)]
+    public int WeekOffset { get; set; } = 0;
 
     public Dictionary<int, string> DayMap = new()
     {
@@ -80,9 +86,12 @@ public class IndexModel : BasePageModel
             MyEnrollments = await _enrollmentService.GetByStudentAsync(userId);
         }
 
-        // Filter only active enrollments (Paid - status 2)
-        // Hide completed courses (status 3) from schedule
-        MyEnrollments = MyEnrollments.Where(e => e.Status == 2).ToList();
+        // Keep paid/completed/failed records to preserve schedule history context.
+        MyEnrollments = MyEnrollments.Where(e => e.Status is 2 or 3 or 5).ToList();
+
+        WeekStartDate = StartOfWeek(DateTime.Today).AddDays(WeekOffset * 7);
+        WeekEndDate = WeekStartDate.AddDays(6);
+        WeeklySessions = BuildWeeklySessions(WeekStartDate, WeekEndDate);
 
         return Page();
     }
@@ -98,14 +107,14 @@ public class IndexModel : BasePageModel
     /// <summary>
     /// Group enrollments by day of week
     /// </summary>
-    public Dictionary<int, List<EnrollmentDto>> GetEnrollmentsByDay()
+    public Dictionary<int, List<WeeklyScheduleSessionDto>> GetEnrollmentsByDay()
     {
-        var grouped = new Dictionary<int, List<EnrollmentDto>>();
+        var grouped = new Dictionary<int, List<WeeklyScheduleSessionDto>>();
         foreach (var day in DayMap.Keys)
         {
-            grouped[day] = MyEnrollments
-                .Where(e => e.DayName == DayMap[day])
-                .OrderBy(e => e.StartTime)
+            grouped[day] = WeeklySessions
+                .Where(s => ((int)s.Date.DayOfWeek + 1) == day)
+                .OrderBy(s => s.Enrollment.StartTime)
                 .ToList();
         }
         return grouped;
@@ -127,5 +136,77 @@ public class IndexModel : BasePageModel
 
         return times.Select((t, i) => (i, t, $"{t.Hours:D2}:{t.Minutes:D2}"))
                     .ToList();
+    }
+
+    private static DateTime StartOfWeek(DateTime date)
+    {
+        var diff = (7 + (date.DayOfWeek - DayOfWeek.Monday)) % 7;
+        return date.Date.AddDays(-diff);
+    }
+
+    private List<WeeklyScheduleSessionDto> BuildWeeklySessions(DateTime weekStart, DateTime weekEnd)
+    {
+        var result = new List<WeeklyScheduleSessionDto>();
+
+        foreach (var enrollment in MyEnrollments)
+        {
+            if (enrollment.SlotDayOfWeek <= 0)
+                continue;
+
+            if (enrollment.SemesterStartDate == DateTime.MinValue || enrollment.SemesterEndDate == DateTime.MinValue)
+                continue;
+
+            var sessions = BuildClassSessions(
+                enrollment.SemesterStartDate.Date,
+                enrollment.SemesterEndDate.Date,
+                enrollment.SlotDayOfWeek);
+
+            var totalSessions = sessions.Count;
+
+            foreach (var session in sessions.Where(s => s.Date >= weekStart.Date && s.Date <= weekEnd.Date))
+            {
+                result.Add(new WeeklyScheduleSessionDto
+                {
+                    Enrollment = enrollment,
+                    Date = session.Date,
+                    SessionNumber = session.SessionNumber,
+                    TotalSessions = totalSessions
+                });
+            }
+        }
+
+        return result
+            .OrderBy(s => s.Date)
+            .ThenBy(s => s.Enrollment.StartTime)
+            .ToList();
+    }
+
+    // Keep schedule generation consistent with attendance service.
+    private static List<(int SessionNumber, DateTime Date)> BuildClassSessions(DateTime semesterStart, DateTime semesterEnd, int slotDayOfWeek)
+    {
+        var targetDay = (DayOfWeek)Math.Clamp(slotDayOfWeek - 1, 0, 6);
+        var start = semesterStart.Date;
+        var end = semesterEnd.Date;
+
+        var daysUntilTarget = ((int)targetDay - (int)start.DayOfWeek + 7) % 7;
+        var first = start.AddDays(daysUntilTarget);
+
+        var sessions = new List<(int SessionNumber, DateTime Date)>();
+        var sessionNumber = 1;
+        for (var current = first; current <= end; current = current.AddDays(7))
+        {
+            sessions.Add((sessionNumber++, current));
+        }
+
+        return sessions;
+    }
+
+    public class WeeklyScheduleSessionDto
+    {
+        public EnrollmentDto Enrollment { get; set; } = null!;
+        public DateTime Date { get; set; }
+        public int SessionNumber { get; set; }
+        public int TotalSessions { get; set; }
+        public bool IsPassed => Enrollment.Grade?.Status == 2 && Enrollment.Grade.IsPassed;
     }
 }

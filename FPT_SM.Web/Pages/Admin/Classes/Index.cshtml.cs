@@ -73,8 +73,12 @@ public class IndexModel : BasePageModel
         if (result.IsSuccess)
         {
             TempData["Success"] = result.Message ?? "Đã xóa lớp học.";
-            await _hubContext.Clients.Group("admin_all").SendAsync("ClassUpdated", new { action = "delete", id });
-            await _hubContext.Clients.Group("manager_all").SendAsync("ClassUpdated", new { action = "delete", id });
+            var groups = new[] { "admin_all", "manager_all", "teacher_all", "student_all" };
+            foreach (var group in groups)
+            {
+                await _hubContext.Clients.Group(group).SendAsync("ClassUpdated", new { action = "delete", id });
+                await _hubContext.Clients.Group(group).SendAsync("EntityChanged", new { entity = "Class", action = "delete", id });
+            }
         }
         else
         {

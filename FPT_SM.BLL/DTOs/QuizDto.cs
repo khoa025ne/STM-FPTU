@@ -124,3 +124,19 @@ public class QuizSubmissionReportDto
     public DateTime? SubmittedAt { get; set; }
     public string Status { get; set; } = null!;
 }
+
+public class GenerateQuizFromTextDto
+{
+    public int ClassId { get; set; }
+    public string SourceText { get; set; } = string.Empty;
+    public int QuestionCount { get; set; } = 10;
+    public string? Difficulty { get; set; } = "mixed";
+    public string? QuizTitle { get; set; }
+}
+
+public class GeneratedQuizDraftDto
+{
+    public string Title { get; set; } = string.Empty;
+    public string Description { get; set; } = string.Empty;
+    public List<CreateQuizQuestionDto> Questions { get; set; } = new();
+}

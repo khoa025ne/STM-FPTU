@@ -14,21 +14,42 @@
     var semesterValues = Model.SemesterTrends.Select(s => s.EnrollmentCount).ToList();
 }
 
-<div class="space-y-6">
-    <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex flex-col md:flex-row gap-6 items-center">
+<style>
+    .usage-report .panel {
+        background: #fff;
+        border: 1px solid #d4d4d8;
+        border-radius: 18px;
+        box-shadow: none;
+    }
+
+    .usage-report .panel-title {
+        color: #111827;
+        font-weight: 800;
+        letter-spacing: -0.01em;
+    }
+
+    .usage-report .chip {
+        background: #f4f4f5;
+        color: #18181b;
+        border: 1px solid #e4e4e7;
+    }
+</style>
+
+<div class="usage-report space-y-6">
+    <div class="panel p-4 flex flex-col md:flex-row gap-6 items-center">
         <div class="flex-1">
-            <p class="text-slate-400 text-sm">Tổng quan hệ thống</p>
-            <h1 class="text-2xl font-bold text-slate-800">Báo cáo FPTSM</h1>
+            <p class="text-zinc-500 text-xs uppercase tracking-wider">Usage Analytics</p>
+            <h1 class="text-2xl panel-title">Báo cáo FPTSM</h1>
             <p class="text-xs text-slate-500 mt-1">Tháng @Model.Month/@Model.Year</p>
         </div>
         <div class="flex flex-wrap gap-3">
-            <a href="/Admin/Users" class="px-4 py-2 rounded-lg bg-slate-100 text-sm text-slate-600 font-semibold hover:bg-slate-200 transition">
+            <a href="/Admin/Users" class="chip px-4 py-2 rounded-lg text-sm font-semibold hover:bg-zinc-200 transition">
                 SV: @Model.Overview.TotalStudents
             </a>
-            <a href="/Admin/Users" class="px-4 py-2 rounded-lg bg-slate-100 text-sm text-slate-600 font-semibold hover:bg-slate-200 transition">
+            <a href="/Admin/Users" class="chip px-4 py-2 rounded-lg text-sm font-semibold hover:bg-zinc-200 transition">
                 GV: @Model.Overview.TotalTeachers
             </a>
-            <a href="/Admin/Dashboard" class="px-4 py-2 rounded-lg bg-fpt-orange text-white text-sm font-semibold hover:bg-orange-600 transition">
+            <a href="/Admin/Dashboard" class="px-4 py-2 rounded-lg bg-zinc-900 text-white text-sm font-semibold hover:bg-black transition">
                 Doanh thu: @Model.Overview.TotalRevenue.ToString("N0") VNĐ
             </a>
         </div>
@@ -37,14 +58,14 @@
     @if (Model.EnableComparison && (Model.RevenueChangePercent != 0 || Model.EnrollmentChangePercent != 0))
     {
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
+            <div class="panel p-6">
                 <div class="flex items-center justify-between">
                     <div>
                         <p class="text-xs text-slate-400 font-semibold">Thay đổi doanh thu</p>
                         <h3 class="text-2xl font-bold text-slate-800 mt-2">@Model.RevenueChangePercent.ToString("+0.0;-0.0;0")%</h3>
                         <p class="text-xs text-slate-500 mt-1">So với tháng @Model.ComparisonMonth/@Model.ComparisonYear</p>
                     </div>
-                    <div class="text-4xl @(Model.RevenueChangePercent >= 0 ? "text-green-500" : "text-red-500")">
+                    <div class="text-4xl text-zinc-700">
                         @if (Model.RevenueChangePercent >= 0)
                         {
                             <span>📈</span>
@@ -56,14 +77,14 @@
                     </div>
                 </div>
             </div>
-            <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
+            <div class="panel p-6">
                 <div class="flex items-center justify-between">
                     <div>
                         <p class="text-xs text-slate-400 font-semibold">Thay đổi đăng ký</p>
                         <h3 class="text-2xl font-bold text-slate-800 mt-2">@Model.EnrollmentChangePercent.ToString("+0.0;-0.0;0")%</h3>
                         <p class="text-xs text-slate-500 mt-1">Số lượng sinh viên đăng ký</p>
                     </div>
-                    <div class="text-4xl @(Model.EnrollmentChangePercent >= 0 ? "text-green-500" : "text-red-500")">
+                    <div class="text-4xl text-zinc-700">
                         @if (Model.EnrollmentChangePercent >= 0)
                         {
                             <span>📈</span>
@@ -78,13 +99,11 @@
         </div>
     }
 
-    </div>
-
     <div class="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-6">
-        <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 space-y-6">
+        <div class="panel p-6 space-y-6">
             <div class="flex flex-wrap gap-4 items-center justify-between">
                 <div>
-                    <h2 class="text-lg font-bold text-slate-800">Lọc dữ liệu</h2>
+                    <h2 class="text-lg panel-title">Lọc dữ liệu</h2>
                     <p class="text-xs text-slate-400">Chọn kỳ/ tháng để cập nhật số liệu.</p>
                 </div>
             </div>
@@ -175,18 +194,18 @@
 
                 <!-- Submit button -->
                 <div class="sm:col-span-5 flex gap-3">
-                    <button class="flex-1 py-2 rounded-xl bg-fpt-navy text-white text-sm font-bold hover:bg-blue-900 transition" type="submit">
+                    <button class="flex-1 py-2 rounded-xl bg-zinc-900 text-white text-sm font-bold hover:bg-black transition" type="submit">
                         Áp dụng
                     </button>
                 </div>
             </form>
         </div>
-        <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 space-y-4">
+        <div class="panel p-6 space-y-4">
             <h3 class="text-sm font-semibold text-slate-500">Xuất báo cáo</h3>
             <form method="post" asp-page-handler="ExportExcel" class="space-y-3">
                 <input type="hidden" asp-for="Month" />
                 <input type="hidden" asp-for="Year" />
-                <button type="submit" class="w-full py-2 rounded-xl bg-fpt-orange text-white text-sm font-bold hover:bg-orange-600">Tải Excel</button>
+                <button type="submit" class="w-full py-2 rounded-xl bg-zinc-800 text-white text-sm font-bold hover:bg-black">Tải Excel</button>
             </form>
             <form method="post" asp-page-handler="ExportPdf" class="space-y-3">
                 <input type="hidden" asp-for="Month" />
@@ -197,15 +216,15 @@
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div class="bg-white border border-slate-100 rounded-2xl shadow-sm p-4">
+        <div class="panel p-4">
             <p class="text-xs text-slate-400">Doanh thu theo tháng</p>
             <canvas id="revenueChart" height="180"></canvas>
         </div>
-        <div class="bg-white border border-slate-100 rounded-2xl shadow-sm p-4">
+        <div class="panel p-4">
             <p class="text-xs text-slate-400">Tỉ lệ đậu/rớt theo môn</p>
             <canvas id="gradeChart" height="180"></canvas>
         </div>
-        <div class="bg-white border border-slate-100 rounded-2xl shadow-sm p-4">
+        <div class="panel p-4">
             <p class="text-xs text-slate-400">Đăng ký theo học kỳ</p>
             <canvas id="semesterChart" height="180"></canvas>
         </div>
@@ -213,16 +232,16 @@
 
     @if (Model.EnableComparison && Model.RevenueComparison?.Monthly?.Count > 0)
     {
-        <div class="bg-white border border-slate-100 rounded-2xl shadow-sm p-6 space-y-4">
-            <h3 class="text-lg font-bold text-slate-800">So sánh doanh thu</h3>
+        <div class="panel p-6 space-y-4">
+            <h3 class="text-lg panel-title">So sánh doanh thu</h3>
             <p class="text-xs text-slate-500">@Model.CurrentPeriodName vs @Model.ComparisonPeriodName</p>
             <canvas id="comparisonChart" height="80"></canvas>
         </div>
     }
 
-    <div class="bg-white border border-slate-100 rounded-2xl shadow-sm p-6 space-y-4">
+    <div class="panel p-6 space-y-4">
         <div class="flex items-center justify-between">
-            <h3 class="text-lg font-bold text-slate-800">Top môn học được đăng ký</h3>
+            <h3 class="text-lg panel-title">Top môn học được đăng ký</h3>
             <span class="text-xs text-slate-500">Hiển thị 5 môn nhiều SV nhất</span>
         </div>
         <div class="overflow-x-auto">
@@ -246,7 +265,7 @@
                             <td class="py-3 pr-4">@item.Capacity</td>
                             <td class="py-3 pr-4">
                                 <div class="h-2.5 bg-slate-200 rounded-full">
-                                    <div class="h-2.5 bg-fpt-orange rounded-full" style="width:@(item.Capacity > 0 ? (item.TotalEnrolled * 100 / item.Capacity) : 0)%"></div>
+                                    <div class="h-2.5 bg-zinc-800 rounded-full" style="width:@(item.Capacity > 0 ? (item.TotalEnrolled * 100 / item.Capacity) : 0)%"></div>
                                 </div>
                             </td>
                         </tr>
@@ -259,72 +278,144 @@
 
 @section Scripts {
 <script>
-    const revenueCtx = document.getElementById('revenueChart');
-    new Chart(revenueCtx, {
-        type: 'line',
-        data: {
-            labels: @Html.Raw(JsonSerializer.Serialize(chartLabels)),
-            datasets: [{
-                label: 'Doanh thu',
-                borderColor: '#0EA5E9',
-                backgroundColor: 'rgba(14,165,233,0.2)',
-                data: @Html.Raw(JsonSerializer.Serialize(revenueValues)),
-                tension: 0.35,
-                fill: true
-            }]
-        },
-        options: {
-            responsive: true,
-            scales: {
-                y: { beginAtZero: true, ticks: { callback: value => value.toLocaleString('vi-VN') } }
-            }
-        }
-    });
+    let revenueChartInstance;
+    let gradeChartInstance;
+    let semesterChartInstance;
+    let comparisonChartInstance;
 
-    const gradeCtx = document.getElementById('gradeChart');
-    new Chart(gradeCtx, {
-        type: 'bar',
-        data: {
-            labels: @Html.Raw(JsonSerializer.Serialize(passLabels)),
-            datasets: [
-                {
-                    label: 'Đậu',
-                    backgroundColor: '#14B8A6',
-                    data: @Html.Raw(JsonSerializer.Serialize(passValues))
-                },
-                {
-                    label: 'Rớt',
-                    backgroundColor: '#EF4444',
-                    data: @Html.Raw(JsonSerializer.Serialize(failValues))
+    function getThemeTokens() {
+        const mystic = document.documentElement.classList.contains('theme-mystic');
+        return mystic
+            ? {
+                linePrimary: '#38bdf8',
+                fillPrimary: 'rgba(56,189,248,0.16)',
+                lineSecondary: '#a78bfa',
+                fillSecondary: 'rgba(167,139,250,0.14)',
+                neutral: '#94a3b8',
+                grid: 'rgba(148,163,184,0.24)',
+                ticks: '#cbd5e1'
+            }
+            : {
+                linePrimary: '#0f172a',
+                fillPrimary: 'rgba(15,23,42,0.10)',
+                lineSecondary: '#fb7185',
+                fillSecondary: 'rgba(251,113,133,0.14)',
+                neutral: '#64748b',
+                grid: 'rgba(100,116,139,0.22)',
+                ticks: '#475569'
+            };
+    }
+
+    function axisOptions(tokens, formatter) {
+        return {
+            beginAtZero: true,
+            grid: { color: tokens.grid },
+            ticks: {
+                color: tokens.ticks,
+                callback: formatter
+            }
+        };
+    }
+
+    function renderReportCharts() {
+        const tokens = getThemeTokens();
+
+        if (revenueChartInstance) revenueChartInstance.destroy();
+        if (gradeChartInstance) gradeChartInstance.destroy();
+        if (semesterChartInstance) semesterChartInstance.destroy();
+        if (comparisonChartInstance) comparisonChartInstance.destroy();
+
+        const revenueCtx = document.getElementById('revenueChart');
+        revenueChartInstance = new Chart(revenueCtx, {
+            type: 'line',
+            data: {
+                labels: @Html.Raw(JsonSerializer.Serialize(chartLabels)),
+                datasets: [{
+                    label: 'Doanh thu',
+                    borderColor: tokens.linePrimary,
+                    backgroundColor: tokens.fillPrimary,
+                    data: @Html.Raw(JsonSerializer.Serialize(revenueValues)),
+                    tension: 0.38,
+                    fill: true,
+                    borderWidth: 2.4,
+                    pointRadius: 3,
+                    pointHoverRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { labels: { color: tokens.ticks } } },
+                scales: {
+                    y: axisOptions(tokens, value => value.toLocaleString('vi-VN')),
+                    x: { grid: { color: tokens.grid }, ticks: { color: tokens.ticks } }
                 }
-            ]
-        },
-        options: {
-            responsive: true,
-            scales: {
-                y: { beginAtZero: true }
             }
-        }
-    });
+        });
 
-    const semesterCtx = document.getElementById('semesterChart');
-    new Chart(semesterCtx, {
-        type: 'bar',
-        data: {
-            labels: @Html.Raw(JsonSerializer.Serialize(semesterLabels)),
-            datasets: [{
-                label: 'Sinh viên',
-                backgroundColor: '#4F46E5',
-                data: @Html.Raw(JsonSerializer.Serialize(semesterValues))
-            }]
-        },
-        options: {
-            responsive: true,
-            scales: {
-                y: { beginAtZero: true }
+        const gradeCtx = document.getElementById('gradeChart');
+        gradeChartInstance = new Chart(gradeCtx, {
+            type: 'line',
+            data: {
+                labels: @Html.Raw(JsonSerializer.Serialize(passLabels)),
+                datasets: [
+                    {
+                        label: 'Đậu (%)',
+                        borderColor: tokens.linePrimary,
+                        backgroundColor: tokens.fillPrimary,
+                        data: @Html.Raw(JsonSerializer.Serialize(passValues)),
+                        tension: 0.35,
+                        fill: true,
+                        borderWidth: 2.2,
+                        pointRadius: 2.8
+                    },
+                    {
+                        label: 'Rớt (SV)',
+                        borderColor: tokens.lineSecondary,
+                        backgroundColor: tokens.fillSecondary,
+                        data: @Html.Raw(JsonSerializer.Serialize(failValues)),
+                        tension: 0.35,
+                        fill: true,
+                        borderWidth: 2.2,
+                        pointRadius: 2.8
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { labels: { color: tokens.ticks } } },
+                scales: {
+                    y: axisOptions(tokens, value => value),
+                    x: { grid: { color: tokens.grid }, ticks: { color: tokens.ticks } }
+                }
             }
-        }
-    });
+        });
+
+        const semesterCtx = document.getElementById('semesterChart');
+        semesterChartInstance = new Chart(semesterCtx, {
+            type: 'line',
+            data: {
+                labels: @Html.Raw(JsonSerializer.Serialize(semesterLabels)),
+                datasets: [{
+                    label: 'Sinh viên',
+                    borderColor: tokens.neutral,
+                    backgroundColor: 'rgba(148,163,184,0.15)',
+                    data: @Html.Raw(JsonSerializer.Serialize(semesterValues)),
+                    tension: 0.28,
+                    fill: true,
+                    borderWidth: 2,
+                    pointRadius: 2.5
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { labels: { color: tokens.ticks } } },
+                scales: {
+                    y: axisOptions(tokens, value => value),
+                    x: { grid: { color: tokens.grid }, ticks: { color: tokens.ticks } }
+                }
+            }
+        });
+    }
 
     // Comparison chart
     @if (Model.EnableComparison && Model.RevenueComparison?.Monthly?.Count > 0)
@@ -333,25 +424,42 @@
         var currentTotal = Model.RevenueReport.Monthly.Sum(m => m.Revenue);
         var previousTotal = Model.RevenueComparison.Monthly.Sum(m => m.Revenue);
         <text>
-        const comparisonCtx = document.getElementById('comparisonChart');
-        new Chart(comparisonCtx, {
-            type: 'bar',
-            data: {
-                labels: @Html.Raw(JsonSerializer.Serialize(comparisonLabels)),
-                datasets: [{
-                    label: 'Doanh thu (VNĐ)',
-                    backgroundColor: ['#0EA5E9', '#94A3B8'],
-                    data: [@currentTotal, @previousTotal]
-                }]
-            },
-            options: {
-                responsive: true,
-                scales: {
-                    y: { beginAtZero: true, ticks: { callback: value => value.toLocaleString('vi-VN') } }
+        function renderComparisonChart() {
+            const tokens = getThemeTokens();
+            const comparisonCtx = document.getElementById('comparisonChart');
+            comparisonChartInstance = new Chart(comparisonCtx, {
+                type: 'line',
+                data: {
+                    labels: @Html.Raw(JsonSerializer.Serialize(comparisonLabels)),
+                    datasets: [{
+                        label: 'Doanh thu (VNĐ)',
+                        borderColor: tokens.linePrimary,
+                        backgroundColor: tokens.fillPrimary,
+                        data: [@currentTotal, @previousTotal],
+                        tension: 0.15,
+                        fill: true,
+                        borderWidth: 2.4,
+                        pointRadius: 4,
+                        pointHoverRadius: 7
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { labels: { color: tokens.ticks } } },
+                    scales: {
+                        y: axisOptions(tokens, value => value.toLocaleString('vi-VN')),
+                        x: { grid: { color: tokens.grid }, ticks: { color: tokens.ticks } }
+                    }
                 }
-            }
-        });
+            });
+        }
         </text>
+    }
+
+    renderReportCharts();
+    @if (Model.EnableComparison && Model.RevenueComparison?.Monthly?.Count > 0)
+    {
+        <text>renderComparisonChart();</text>
     }
 
     // Handle comparison mode radio button changes
@@ -376,6 +484,14 @@
                     yearFields.style.display = 'block';
                 }
             });
+        });
+
+        window.addEventListener('admin-theme-changed', () => {
+            renderReportCharts();
+            @if (Model.EnableComparison && Model.RevenueComparison?.Monthly?.Count > 0)
+            {
+                <text>renderComparisonChart();</text>
+            }
         });
     });
 </script>

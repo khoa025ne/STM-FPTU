@@ -6,10 +6,16 @@ using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Local override file for sensitive settings (ignored by git).
+builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: true);
+
 builder.Services.AddRazorPages();
 builder.Services.AddControllers();
 
 var conn = builder.Configuration.GetConnectionString("DefaultConnection");
+if (string.IsNullOrWhiteSpace(conn))
+    throw new InvalidOperationException("Missing ConnectionStrings:DefaultConnection. Set it via appsettings.Local.json, user-secrets, or environment variables.");
+
 builder.Services.AddDbContext<AppDbContext>(o =>
     o.UseMySql(conn, ServerVersion.AutoDetect(conn)));
 

@@ -28,23 +28,13 @@ public class IndexModel : BasePageModel
     public List<ClassDto> MyClasses { get; set; } = new();
     public GradeSheetDto? GradeSheet { get; set; }
 
-    [BindProperty(SupportsGet = true)] public int? SelectedClassId { get; set; }
+    [BindProperty(SupportsGet = true, Name = "classId")] public int? SelectedClassId { get; set; }
     [BindProperty] public List<UpdateGradeDto> GradeItems { get; set; } = new();
 
     public async Task<IActionResult> OnGetAsync()
     {
-        System.Console.WriteLine($"[DEBUG-PageModel] ===== OnGetAsync STARTED =====");
-        System.Console.WriteLine($"[DEBUG-PageModel] CurrentUserId={CurrentUserId}");
-        System.Console.WriteLine($"[DEBUG-PageModel] SelectedClassId={SelectedClassId}");
-
         var auth = RequireRole("Teacher");
-        if (auth != null)
-        {
-            System.Console.WriteLine($"[DEBUG-PageModel] ❌ Auth FAILED - Redirecting");
-            return auth;
-        }
-
-        System.Console.WriteLine($"[DEBUG-PageModel] ✓ Auth passed");
+        if (auth != null) return auth;
 
         ViewData["Title"] = "Quản lý điểm";
         ViewData["FullName"] = CurrentFullName;
@@ -52,23 +42,41 @@ public class IndexModel : BasePageModel
         ViewData["UserId"] = CurrentUserId;
 
         MyClasses = await _classService.GetByTeacherAsync(CurrentUserId!.Value);
-        System.Console.WriteLine($"[DEBUG-PageModel] MyClasses count={MyClasses.Count}");
-
-        System.Console.WriteLine($"[DEBUG-PageModel] SelectedClassId HasValue={SelectedClassId.HasValue}");
 
         if (SelectedClassId.HasValue)
         {
-            System.Console.WriteLine($"[DEBUG-PageModel] 🔄 Calling GetGradeSheetAsync with classId={SelectedClassId.Value}");
             GradeSheet = await _gradeService.GetGradeSheetAsync(SelectedClassId.Value);
-            System.Console.WriteLine($"[DEBUG-PageModel] ✓ GradeSheet returned, Grades count={GradeSheet?.Grades.Count ?? 0}");
+        }
+        return Page();
+    }
+
+    public async Task<IActionResult> OnPostReopenGradesAsync(int classId)
+    {
+        var auth = RequireRole("Teacher");
+        if (auth != null) return auth;
+
+        var result = await _gradeService.ReopenGradesAsync(classId, CurrentUserId!.Value);
+        if (result.IsSuccess)
+        {
+            var roles = new[] { "admin_all", "manager_all", "teacher_all", "student_all" };
+            foreach (var role in roles)
+            {
+                await _notificationHub.Clients.Group(role).SendAsync("EntityChanged", new
+                {
+                    entity = "Grade",
+                    action = "reopen",
+                    classId
+                });
+            }
+
+            TempData["Success"] = result.Message;
         }
         else
         {
-            System.Console.WriteLine($"[DEBUG-PageModel] ⚠️ SelectedClassId is NULL or false");
+            TempData["Error"] = result.Message;
         }
 
-        System.Console.WriteLine($"[DEBUG-PageModel] ===== OnGetAsync COMPLETED =====");
-        return Page();
+        return RedirectToPage(new { classId });
     }
 
     public async Task<IActionResult> OnPostUpdateGradeAsync(UpdateGradeDto dto, int classId)
@@ -87,6 +95,19 @@ public class IndexModel : BasePageModel
                 final = dto.FinalScore,
                 message = "Điểm đã được cập nhật"
             });
+
+            var roles = new[] { "admin_all", "manager_all", "teacher_all", "student_all" };
+            foreach (var role in roles)
+            {
+                await _notificationHub.Clients.Group(role).SendAsync("EntityChanged", new
+                {
+                    entity = "Grade",
+                    action = "update",
+                    classId,
+                    gradeId = dto.GradeId
+                });
+            }
+
             TempData["Success"] = result.Message;
         }
         else
@@ -118,6 +139,21 @@ public class IndexModel : BasePageModel
                         final = dto.FinalScore
                     });
                 }
+            }
+        }
+
+        if (saved > 0)
+        {
+            var roles = new[] { "admin_all", "manager_all", "teacher_all", "student_all" };
+            foreach (var role in roles)
+            {
+                await _notificationHub.Clients.Group(role).SendAsync("EntityChanged", new
+                {
+                    entity = "Grade",
+                    action = "bulk-update",
+                    classId,
+                    count = saved
+                });
             }
         }
 
@@ -153,6 +189,17 @@ public class IndexModel : BasePageModel
                         type = "success"
                     });
                 }
+            }
+
+            var roles = new[] { "admin_all", "manager_all", "teacher_all", "student_all" };
+            foreach (var role in roles)
+            {
+                await _notificationHub.Clients.Group(role).SendAsync("EntityChanged", new
+                {
+                    entity = "Grade",
+                    action = "publish",
+                    classId
+                });
             }
 
             TempData["Success"] = result.Message;

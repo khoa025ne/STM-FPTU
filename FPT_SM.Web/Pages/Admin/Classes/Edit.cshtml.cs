@@ -140,19 +140,24 @@ public class EditModel : BasePageModel
             return Page();
         }
 
-        await _hubContext.Clients.Group("admin_all").SendAsync("ClassUpdated", new
+        var groups = new[] { "admin_all", "manager_all", "teacher_all", "student_all" };
+        foreach (var group in groups)
         {
-            id = Id,
-            action = "edit",
-            classCode = Class.Name
-        });
+            await _hubContext.Clients.Group(group).SendAsync("ClassUpdated", new
+            {
+                id = Id,
+                action = "edit",
+                classCode = Class.Name
+            });
 
-        await _hubContext.Clients.Group("manager_all").SendAsync("ClassUpdated", new
-        {
-            id = Id,
-            action = "edit",
-            classCode = Class.Name
-        });
+            await _hubContext.Clients.Group(group).SendAsync("EntityChanged", new
+            {
+                entity = "Class",
+                action = "edit",
+                id = Id,
+                classCode = Class.Name
+            });
+        }
 
         TempData["Success"] = $"Đã cập nhật lớp học <b>{Class.Name}</b> thành công!";
         return RedirectToPage("/Admin/Classes/Index");

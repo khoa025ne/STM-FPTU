@@ -277,6 +277,51 @@
                         </div>
                     </div>
 
+                    <!-- AI Quiz Generator -->
+                    <div class="border border-blue-100 bg-blue-50/60 rounded-xl p-4 space-y-3">
+                        <div class="flex items-center justify-between gap-3">
+                            <div>
+                                <p class="text-sm font-bold text-blue-800">Tạo câu hỏi bằng AI (1 lần gọi API)</p>
+                                <p class="text-xs text-blue-600 mt-0.5">Dán nội dung bài học, AI sẽ tạo nháp để bạn chỉnh sửa trước khi lưu</p>
+                            </div>
+                            <button type="button" id="generateAiBtn" onclick="generateQuizWithAI()"
+                                    class="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-3 py-2 rounded-lg transition-colors">
+                                <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+                                Generate by AI
+                            </button>
+                        </div>
+
+                        <div class="grid grid-cols-3 gap-3">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-700 mb-1">Số câu hỏi</label>
+                                <input id="aiQuestionCount" type="number" min="5" max="50" value="10"
+                                       class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-300 focus:border-blue-500 transition-all bg-white" />
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-700 mb-1">Độ khó</label>
+                                <select id="aiDifficulty"
+                                        class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-300 focus:border-blue-500 transition-all bg-white">
+                                    <option value="easy">Dễ</option>
+                                    <option value="medium" selected>Trung bình</option>
+                                    <option value="hard">Khó</option>
+                                    <option value="mixed">Trộn mức độ</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-700 mb-1">Tiêu đề gợi ý</label>
+                                <input id="aiQuizTitle" type="text" placeholder="Để trống nếu không cần"
+                                       class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-300 focus:border-blue-500 transition-all bg-white" />
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">Nội dung nguồn <span class="text-red-500">*</span></label>
+                            <textarea id="aiSourceText" rows="5"
+                                      class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-300 focus:border-blue-500 transition-all resize-y bg-white"
+                                      placeholder="Dán giáo trình, tóm tắt bài học hoặc nội dung giảng dạy vào đây..."></textarea>
+                        </div>
+                    </div>
+
                     <!-- Questions Builder -->
                     <div>
                         <div class="flex items-center justify-between mb-2">
@@ -414,6 +459,147 @@
         updateTotalPoints();
 
         if (window.lucide) lucide.createIcons();
+    }
+
+    function clearAllQuestions() {
+        document.getElementById('questionsContainer').innerHTML = '';
+        document.getElementById('noQuestionsMsg').classList.remove('hidden');
+        questionCount = 0;
+        updateTotalPoints();
+    }
+
+    async function generateQuizWithAI() {
+        const classId = parseInt(document.getElementById('modalClassId')?.value || '0');
+        const sourceText = (document.getElementById('aiSourceText')?.value || '').trim();
+        const questionCountInput = parseInt(document.getElementById('aiQuestionCount')?.value || '10');
+        const difficulty = document.getElementById('aiDifficulty')?.value || 'medium';
+        const aiQuizTitle = (document.getElementById('aiQuizTitle')?.value || '').trim();
+        const manualTitle = (document.querySelector('input[name="CreateDto.Title"]')?.value || '').trim();
+        const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+
+        if (!classId) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Chưa chọn lớp',
+                text: 'Vui lòng chọn lớp học trước khi tạo câu hỏi bằng AI.',
+                confirmButtonColor: '#2563eb'
+            });
+            return;
+        }
+
+        if (!sourceText) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Thiếu nội dung nguồn',
+                text: 'Vui lòng nhập hoặc dán nội dung bài học để AI tạo câu hỏi.',
+                confirmButtonColor: '#2563eb'
+            });
+            return;
+        }
+
+        const finalQuestionCount = Math.min(50, Math.max(5, Number.isNaN(questionCountInput) ? 10 : questionCountInput));
+        const generateBtn = document.getElementById('generateAiBtn');
+        const originalBtnHtml = generateBtn.innerHTML;
+
+        try {
+            generateBtn.disabled = true;
+            generateBtn.classList.add('opacity-70', 'cursor-not-allowed');
+            generateBtn.innerHTML = '<i data-lucide="loader-2" class="w-3.5 h-3.5 animate-spin"></i> Đang tạo...';
+            if (window.lucide) lucide.createIcons();
+
+            const response = await fetch('?handler=GenerateWithAi', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': token || ''
+                },
+                body: JSON.stringify({
+                    classId,
+                    sourceText,
+                    questionCount: finalQuestionCount,
+                    difficulty,
+                    quizTitle: aiQuizTitle || manualTitle || null
+                })
+            });
+
+            const result = await response.json();
+            if (!response.ok || !result.isSuccess || !result.data) {
+                throw new Error(result.message || 'Không thể tạo quiz bằng AI.');
+            }
+
+            const draft = result.data;
+            if (!draft.questions || !Array.isArray(draft.questions) || draft.questions.length === 0) {
+                throw new Error('AI không trả về câu hỏi hợp lệ.');
+            }
+
+            const currentQuestionCount = document.getElementById('questionsContainer').children.length;
+            if (currentQuestionCount > 0) {
+                const confirmed = await Swal.fire({
+                    icon: 'question',
+                    title: 'Ghi đè câu hỏi hiện tại?',
+                    text: 'Danh sách câu hỏi hiện có sẽ bị thay thế bởi câu hỏi AI.',
+                    showCancelButton: true,
+                    confirmButtonText: 'Đồng ý',
+                    cancelButtonText: 'Hủy',
+                    confirmButtonColor: '#2563eb',
+                    cancelButtonColor: '#94a3b8'
+                });
+                if (!confirmed.isConfirmed) return;
+            }
+
+            clearAllQuestions();
+
+            draft.questions.forEach((question, qIdx) => {
+                addQuestion();
+                const qText = document.querySelector(`textarea[name="CreateDto.Questions[${qIdx}].QuestionText"]`);
+                if (qText) qText.value = question.questionText || '';
+
+                const qPoints = document.querySelector(`input[name="CreateDto.Questions[${qIdx}].Points"]`);
+                if (qPoints) qPoints.value = question.points ?? 1;
+
+                const options = Array.isArray(question.options) ? question.options : [];
+                options.forEach((opt, optIdx) => {
+                    const optionInput = document.querySelector(`input[name="CreateDto.Questions[${qIdx}].Options[${optIdx}].OptionText"]`);
+                    if (optionInput) optionInput.value = opt.optionText || '';
+
+                    if (opt.isCorrect === true) {
+                        const radio = document.querySelector(`input[name="CreateDto.Questions[${qIdx}].Options[${optIdx}].IsCorrect_radio"]`);
+                        if (radio) radio.checked = true;
+                        setCorrectAnswer(qIdx, optIdx);
+                    }
+                });
+            });
+
+            const titleInput = document.querySelector('input[name="CreateDto.Title"]');
+            if (titleInput && !titleInput.value.trim()) {
+                titleInput.value = draft.title || '';
+            }
+
+            const descInput = document.querySelector('textarea[name="CreateDto.Description"]');
+            if (descInput && !descInput.value.trim()) {
+                descInput.value = draft.description || '';
+            }
+
+            updateTotalPoints();
+            Swal.fire({
+                icon: 'success',
+                title: 'Đã tạo nháp quiz',
+                text: result.message || 'AI đã tạo câu hỏi thành công. Bạn có thể chỉnh sửa trước khi lưu.',
+                confirmButtonColor: '#2563eb'
+            });
+        } catch (error) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Không thể tạo quiz AI',
+                text: error?.message || 'Đã xảy ra lỗi khi gọi AI.',
+                confirmButtonColor: '#2563eb'
+            });
+        } finally {
+            generateBtn.disabled = false;
+            generateBtn.classList.remove('opacity-70', 'cursor-not-allowed');
+            generateBtn.innerHTML = originalBtnHtml;
+            if (window.lucide) lucide.createIcons();
+        }
     }
 
     function updateTotalPoints() {

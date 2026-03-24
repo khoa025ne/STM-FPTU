@@ -22,6 +22,16 @@
             }
         }
     </script>
+    <script>
+        (function () {
+            try {
+                const theme = localStorage.getItem('admin-theme') || 'playful';
+                document.documentElement.classList.add(theme === 'mystic' ? 'theme-mystic' : 'theme-playful');
+            } catch (e) {
+                document.documentElement.classList.add('theme-playful');
+            }
+        })();
+    </script>
     <style>
         .sidebar-link {
             display: flex;
@@ -40,9 +50,97 @@
             background-color: #FF6B35;
             color: white;
         }
+
+        html.theme-playful body {
+            background:
+                radial-gradient(circle at 10% -10%, rgba(253, 186, 116, 0.24), transparent 42%),
+                radial-gradient(circle at 95% 8%, rgba(125, 211, 252, 0.18), transparent 36%),
+                linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+            color: #111827;
+        }
+
+        html.theme-mystic body {
+            background:
+                radial-gradient(circle at 88% 12%, rgba(56, 189, 248, 0.18), transparent 30%),
+                radial-gradient(circle at 14% 88%, rgba(59, 130, 246, 0.16), transparent 32%),
+                linear-gradient(180deg, #020617 0%, #0b1120 100%);
+            color: #e5e7eb;
+        }
+
+        html.theme-mystic .bg-fpt-navy {
+            background: linear-gradient(180deg, #020617 0%, #111827 100%) !important;
+            border-right: 1px solid rgba(148, 163, 184, 0.2);
+        }
+
+        html.theme-playful .bg-fpt-navy {
+            background: linear-gradient(180deg, #1e293b 0%, #334155 100%) !important;
+        }
+
+        html.theme-mystic .bg-white,
+        html.theme-mystic header.bg-white {
+            background: rgba(17, 24, 39, 0.82) !important;
+            border-color: rgba(71, 85, 105, 0.55) !important;
+            color: #e5e7eb !important;
+            backdrop-filter: blur(8px);
+        }
+
+        html.theme-mystic .text-slate-800,
+        html.theme-mystic .text-slate-700,
+        html.theme-mystic .text-slate-600,
+        html.theme-mystic .text-fpt-navy,
+        html.theme-mystic .text-fpt-orange,
+        html.theme-mystic .text-zinc-900 {
+            color: #f8fafc !important;
+        }
+
+        html.theme-mystic .text-slate-500,
+        html.theme-mystic .text-slate-400,
+        html.theme-mystic .text-zinc-500,
+        html.theme-mystic .text-zinc-700 {
+            color: #94a3b8 !important;
+        }
+
+        html.theme-mystic .border-slate-200,
+        html.theme-mystic .border-slate-100,
+        html.theme-mystic .border-zinc-300,
+        html.theme-mystic .border-zinc-200 {
+            border-color: rgba(71, 85, 105, 0.6) !important;
+        }
+
+        html.theme-playful .bg-white,
+        html.theme-playful header.bg-white {
+            box-shadow: 0 10px 24px rgba(2, 6, 23, 0.05) !important;
+            border-color: rgba(203, 213, 225, 0.8) !important;
+        }
+
+        html.theme-playful .sidebar-link.active {
+            background: linear-gradient(135deg, #fb7185 0%, #f97316 100%) !important;
+            color: #fff !important;
+        }
+
+        html.theme-mystic .sidebar-link.active {
+            background: linear-gradient(135deg, #0ea5e9 0%, #6366f1 100%) !important;
+            color: #ffffff !important;
+            box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.6), 0 0 20px rgba(56, 189, 248, 0.22);
+        }
+
+        html.theme-mystic .shadow-sm,
+        html.theme-mystic .shadow-xl,
+        html.theme-mystic .hover\:shadow-md:hover {
+            box-shadow: 0 8px 30px rgba(2, 6, 23, 0.45) !important;
+        }
+
+        html.theme-playful .text-fpt-orange,
+        html.theme-playful .text-fpt-navy {
+            color: #0f172a !important;
+        }
+
+        #themeToggle {
+            min-width: 138px;
+        }
     </style>
 </head>
-<body class="bg-slate-100 font-sans">
+<body class="bg-slate-100 font-sans transition-colors duration-300">
 <div class="flex h-screen overflow-hidden">
     <!-- Sidebar -->
     <aside class="w-64 bg-fpt-navy flex flex-col flex-shrink-0 shadow-xl">
@@ -118,6 +216,9 @@
                 <p class="text-slate-500 text-sm mt-0.5">Hệ thống quản lý sinh viên FPT</p>
             </div>
             <div class="flex items-center gap-4">
+                <button id="themeToggle" class="px-3 py-1.5 rounded-lg border border-slate-300 text-xs font-semibold text-slate-700 hover:bg-slate-100 transition-colors">
+                    Dark Mystic
+                </button>
                 <button id="notifBtn" class="relative text-slate-500 hover:text-fpt-navy transition-colors">
                     <i data-lucide="bell" class="w-5 h-5"></i>
                     <span id="notifBadge" class="hidden absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">0</span>
@@ -145,12 +246,41 @@
     AOS.init({ duration: 600, once: true });
     lucide.createIcons();
 
+    (function () {
+        const btn = document.getElementById('themeToggle');
+        if (!btn) return;
+
+        const syncLabel = () => {
+            const mystic = document.documentElement.classList.contains('theme-mystic');
+            btn.textContent = mystic ? 'Light Playful' : 'Dark Mystic';
+        };
+
+        btn.addEventListener('click', function () {
+            const mystic = document.documentElement.classList.contains('theme-mystic');
+            document.documentElement.classList.toggle('theme-mystic', !mystic);
+            document.documentElement.classList.toggle('theme-playful', mystic);
+            localStorage.setItem('admin-theme', mystic ? 'playful' : 'mystic');
+            syncLabel();
+
+            window.dispatchEvent(new CustomEvent('admin-theme-changed', {
+                detail: { theme: mystic ? 'playful' : 'mystic' }
+            }));
+        });
+
+        syncLabel();
+    })();
+
     // SignalR notification connection
     (async function() {
         try {
             const userId = @(ViewData["UserId"] ?? 0);
             const conn = await signalRManager.connect('notification', '/hubs/notification');
-            await conn.invoke('JoinGroup', `admin_${userId}`);
+            const groups = [`admin_${userId}`, 'admin_all'];
+            await signalRManager.joinGroups(conn, groups);
+            conn.onreconnected(async () => {
+                await signalRManager.joinGroups(conn, groups);
+            });
+
             conn.on('NewNotification', function(data) {
                 showToast(data.title || data.message || 'Thông báo mới', 'info');
                 const badge = document.getElementById('notifBadge');
@@ -158,6 +288,11 @@
                     badge.classList.remove('hidden');
                     badge.textContent = (parseInt(badge.textContent) || 0) + 1;
                 }
+            });
+
+            signalRManager.bindAutoRefresh(conn, {
+                events: ['EntityChanged', 'UserUpdated', 'ClassUpdated', 'SubjectUpdated', 'SemesterUpdated'],
+                message: 'Du lieu he thong vua duoc cap nhat'
             });
         } catch(e) { console.warn('SignalR notification not connected', e); }
     })();

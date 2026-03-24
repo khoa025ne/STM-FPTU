@@ -5,6 +5,7 @@ using FPT_SM.DAL.Context;
 using FPT_SM.DAL.Entities;
 using FPT_SM.DAL.Repositories.Interfaces;
 using Microsoft.EntityFrameworkCore;
+using System.Text.Json;
 
 namespace FPT_SM.BLL.Services.Implementations;
 
@@ -13,12 +14,14 @@ public class QuizService : IQuizService
     private readonly IQuizRepository _quizRepo;
     private readonly IEnrollmentRepository _enrollmentRepo;
     private readonly AppDbContext _context;
+    private readonly IGeminiService _geminiService;
 
-    public QuizService(IQuizRepository quizRepo, IEnrollmentRepository enrollmentRepo, AppDbContext context)
+    public QuizService(IQuizRepository quizRepo, IEnrollmentRepository enrollmentRepo, AppDbContext context, IGeminiService geminiService)
     {
         _quizRepo = quizRepo;
         _enrollmentRepo = enrollmentRepo;
         _context = context;
+        _geminiService = geminiService;
     }
 
     public async Task<List<QuizDto>> GetByClassAsync(int classId)
@@ -147,6 +150,170 @@ public class QuizService : IQuizService
 
         var created = await _quizRepo.GetWithQuestionsAsync(quiz.Id);
         return ServiceResult<QuizDto>.Success(MapToDto(created!), "Tạo quiz thành công!");
+    }
+
+    public async Task<ServiceResult<GeneratedQuizDraftDto>> GenerateDraftFromTextAsync(GenerateQuizFromTextDto dto)
+    {
+        if (string.IsNullOrWhiteSpace(dto.SourceText))
+            return ServiceResult<GeneratedQuizDraftDto>.Failure("Nguồn dữ liệu text không được để trống.");
+
+        var questionCount = Math.Clamp(dto.QuestionCount, 5, 50);
+        var normalizedText = dto.SourceText.Trim();
+        if (normalizedText.Length > 60000)
+            normalizedText = normalizedText[..60000];
+
+        var systemPrompt =
+            "Bạn là trợ lý tạo quiz cho giáo viên. Nhiệm vụ: từ tài liệu text đầu vào, tạo bộ câu hỏi trắc nghiệm một đáp án đúng. " +
+            "BẮT BUỘC trả về JSON hợp lệ, không markdown, không giải thích ngoài JSON.";
+
+                var userPrompt = $@"Hãy tạo một quiz theo yêu cầu:
+- Số câu: {questionCount}
+- Độ khó: {dto.Difficulty ?? "mixed"}
+- Tiêu đề gợi ý: {dto.QuizTitle ?? "Quiz từ tài liệu"}
+
+Format JSON phải theo schema:
+{{
+    ""title"": ""string"",
+    ""description"": ""string"",
+    ""questions"": [
+        {{
+            ""questionText"": ""string"",
+            ""options"": [""A"", ""B"", ""C"", ""D""],
+            ""correctIndex"": 0
+        }}
+    ]
+}}
+
+Ràng buộc:
+- Mỗi câu đúng 4 đáp án.
+- correctIndex thuộc [0..3].
+- Câu hỏi bám sát nội dung tài liệu.
+
+Dữ liệu tài liệu:
+{normalizedText}";
+
+        string raw;
+        try
+        {
+            // ONE-CALL mode: exactly one Gemini API request.
+            raw = await _geminiService.GenerateContentAsync(systemPrompt, userPrompt);
+        }
+        catch (Exception ex)
+        {
+            return ServiceResult<GeneratedQuizDraftDto>.Failure($"AI không phản hồi: {ex.Message}");
+        }
+
+        var cleanedJson = raw.Trim();
+        if (cleanedJson.StartsWith("```"))
+        {
+            cleanedJson = cleanedJson
+                .Replace("```json", string.Empty, StringComparison.OrdinalIgnoreCase)
+                .Replace("```", string.Empty)
+                .Trim();
+        }
+
+        JsonDocument doc;
+        try
+        {
+            doc = JsonDocument.Parse(cleanedJson);
+        }
+        catch
+        {
+            return ServiceResult<GeneratedQuizDraftDto>.Failure("AI trả về không đúng định dạng JSON. Vui lòng thử lại.");
+        }
+
+        using (doc)
+        {
+            if (!doc.RootElement.TryGetProperty("questions", out var questionsEl) || questionsEl.ValueKind != JsonValueKind.Array)
+                return ServiceResult<GeneratedQuizDraftDto>.Failure("AI chưa sinh được danh sách câu hỏi hợp lệ.");
+
+            var questions = new List<CreateQuizQuestionDto>();
+            var idx = 0;
+            foreach (var q in questionsEl.EnumerateArray())
+            {
+                if (idx >= questionCount) break;
+
+                var qText = q.TryGetProperty("questionText", out var qTextEl)
+                    ? (qTextEl.GetString() ?? string.Empty).Trim()
+                    : string.Empty;
+
+                if (string.IsNullOrWhiteSpace(qText))
+                    continue;
+
+                if (!q.TryGetProperty("options", out var optsEl) || optsEl.ValueKind != JsonValueKind.Array)
+                    continue;
+
+                var options = optsEl.EnumerateArray()
+                    .Select(x => (x.GetString() ?? string.Empty).Trim())
+                    .Where(x => !string.IsNullOrWhiteSpace(x))
+                    .Take(4)
+                    .ToList();
+
+                if (options.Count < 4)
+                    continue;
+
+                var correctIndex = q.TryGetProperty("correctIndex", out var correctEl) && correctEl.ValueKind == JsonValueKind.Number
+                    ? correctEl.GetInt32()
+                    : 0;
+
+                if (correctIndex < 0 || correctIndex > 3)
+                    correctIndex = 0;
+
+                questions.Add(new CreateQuizQuestionDto
+                {
+                    QuestionText = qText,
+                    QuestionType = "SingleChoice",
+                    OrderIndex = idx,
+                    Options = options.Select((opt, oi) => new CreateAnswerOptionDto
+                    {
+                        OptionText = opt,
+                        IsCorrect = oi == correctIndex,
+                        OrderIndex = oi
+                    }).ToList()
+                });
+
+                idx++;
+            }
+
+            if (!questions.Any())
+                return ServiceResult<GeneratedQuizDraftDto>.Failure("Không tạo được câu hỏi hợp lệ từ dữ liệu input.");
+
+            var perQuestion = Math.Round(10m / questions.Count, 2);
+            var running = 0m;
+            for (var i = 0; i < questions.Count; i++)
+            {
+                if (i == questions.Count - 1)
+                {
+                    questions[i].Points = Math.Round(10m - running, 2);
+                }
+                else
+                {
+                    questions[i].Points = perQuestion;
+                    running += perQuestion;
+                }
+            }
+
+            var title = doc.RootElement.TryGetProperty("title", out var titleEl)
+                ? (titleEl.GetString() ?? string.Empty).Trim()
+                : string.Empty;
+
+            var description = doc.RootElement.TryGetProperty("description", out var descEl)
+                ? (descEl.GetString() ?? string.Empty).Trim()
+                : string.Empty;
+
+            if (string.IsNullOrWhiteSpace(title))
+                title = dto.QuizTitle?.Trim() ?? $"Quiz tự động ({questions.Count} câu)";
+
+            if (string.IsNullOrWhiteSpace(description))
+                description = "Bộ câu hỏi được tạo tự động từ dữ liệu text bằng AI.";
+
+            return ServiceResult<GeneratedQuizDraftDto>.Success(new GeneratedQuizDraftDto
+            {
+                Title = title,
+                Description = description,
+                Questions = questions
+            }, $"AI đã tạo nháp quiz {questions.Count} câu hỏi.");
+        }
     }
 
     public async Task<ServiceResult<QuizDto>> PublishAsync(int quizId)

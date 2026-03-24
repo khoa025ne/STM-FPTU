@@ -28,6 +28,9 @@ public class EnrollmentDto
     public TimeSpan EndTime { get; set; }
     public string? RoomNumber { get; set; }
     public string TeacherName { get; set; } = null!;
+    public int SlotDayOfWeek { get; set; }
+    public DateTime SemesterStartDate { get; set; }
+    public DateTime SemesterEndDate { get; set; }
 }
 
 public class EnrollRegistrationDto

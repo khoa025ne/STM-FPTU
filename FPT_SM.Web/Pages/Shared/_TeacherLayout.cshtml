@@ -116,11 +116,30 @@
         try {
             const userId = @(ViewData["UserId"] ?? 0);
             const notifConn = await signalRManager.connect('notification', '/hubs/notification');
-            await notifConn.invoke('JoinGroup', `teacher_${userId}`);
+            const notifGroups = [`teacher_${userId}`, 'teacher_all'];
+            await signalRManager.joinGroups(notifConn, notifGroups);
+            notifConn.onreconnected(async () => {
+                await signalRManager.joinGroups(notifConn, notifGroups);
+            });
             notifConn.on('NewNotification', data => showToast(data.title || data.message || 'Thông báo mới', 'info'));
+            signalRManager.bindAutoRefresh(notifConn, {
+                events: ['EntityChanged', 'UserUpdated', 'ClassUpdated', 'SubjectUpdated', 'SemesterUpdated'],
+                message: 'Du lieu he thong vua duoc cap nhat'
+            });
 
             const attendanceConn = await signalRManager.connect('attendance', '/hubs/attendance');
             const gradeConn = await signalRManager.connect('grade', '/hubs/grade');
+            const quizConn = await signalRManager.connect('quiz', '/hubs/quiz');
+
+            signalRManager.bindAutoRefresh(gradeConn, {
+                events: ['GradeUpdated'],
+                message: 'Diem so vua duoc cap nhat'
+            });
+
+            signalRManager.bindAutoRefresh(quizConn, {
+                events: ['QuizCreated', 'QuizPublished', 'QuizDeleted'],
+                message: 'Quiz vua duoc cap nhat'
+            });
         } catch(e) { console.warn('SignalR not connected', e); }
     })();
 </script>
