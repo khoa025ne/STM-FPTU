@@ -88,6 +88,9 @@
                         </div>
                     </div>
 
+                    <!-- Hidden input to preserve page parameter -->
+                    <input type="hidden" name="Page" value="@Model.Page" />
+
                     <button type="submit" id="depositBtn"
                             class="w-full bg-gradient-to-r from-fpt-navy to-blue-700 hover:from-blue-700 hover:to-fpt-navy text-white font-bold py-3 px-4 rounded-xl transition-all flex items-center justify-center gap-2 shadow-md hover:shadow-lg">
                         <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none">
@@ -288,7 +291,12 @@
         const el = document.getElementById('wallet-balance');
         if (el) el.textContent = Number(newBalance).toLocaleString('vi-VN') + ' ₫';
         showToast('Ví tiền đã được cập nhật! Số dư mới: ' + Number(newBalance).toLocaleString('vi-VN') + ' ₫', 'success');
-        setTimeout(() => location.reload(), 2000);
+        // Preserve current page in URL when reloading
+        const currentUrl = new URL(window.location);
+        const currentPage = currentUrl.searchParams.get('Page') || '1';
+        setTimeout(() => {
+            window.location.href = currentUrl.origin + currentUrl.pathname + '?Page=' + currentPage;
+        }, 2000);
     });
 
     connection.start().then(() => {

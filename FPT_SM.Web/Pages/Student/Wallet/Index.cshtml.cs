@@ -30,6 +30,7 @@ public class IndexModel : BasePageModel
 
     [BindProperty(SupportsGet = true)]
     public int Page { get; set; } = 1;
+    
     public int CurrentPage => Page > 0 ? Page : 1;
 
     public int PageSize { get; set; } = 10;
@@ -38,6 +39,15 @@ public class IndexModel : BasePageModel
     {
         var auth = RequireRole("Student");
         if (auth != null) return auth;
+
+        // Explicitly get Page from query string for debugging
+        var pageStr = HttpContext.Request.Query["Page"].ToString();
+        if (int.TryParse(pageStr, out int pageNum) && pageNum > 0)
+        {
+            Page = pageNum;
+        }
+
+        System.Console.WriteLine($"DEBUG: Page property={Page}, QueryString Page={pageStr}, CurrentPage={CurrentPage}");
 
         ViewData["Title"] = "Ví tiền";
         ViewData["FullName"] = CurrentFullName;
@@ -81,7 +91,7 @@ public class IndexModel : BasePageModel
         if (!result.IsSuccess)
         {
             TempData["ErrorMessage"] = result.Message ?? "Không thể tạo liên kết thanh toán.";
-            return RedirectToPage();
+            return RedirectToPage(new { page = Page });
         }
 
         // Store reference code in session for tracking (optional)
