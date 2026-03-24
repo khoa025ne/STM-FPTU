@@ -61,6 +61,23 @@ using (var scope = app.Services.CreateScope())
     }
 
     await DbSeeder.SeedAsync(scope.ServiceProvider);
+
+    // ==================== CLEANUP DUPLICATE ATTENDANCES ====================
+    // Remove duplicate attendance records (same enrollment + date, keep first only)
+    var allAttendances = await db.Attendances.ToListAsync();
+    var duplicates = allAttendances
+        .GroupBy(a => new { a.EnrollmentId, a.SlotDate })
+        .Where(g => g.Count() > 1)
+        .SelectMany(g => g.OrderBy(a => a.SessionNumber).Skip(1))
+        .ToList();
+
+    if (duplicates.Count > 0)
+    {
+        Console.WriteLine($"Xoá {duplicates.Count} bản ghi điểm danh trùng lặp...");
+        db.Attendances.RemoveRange(duplicates);
+        await db.SaveChangesAsync();
+        Console.WriteLine("Xoá xong bản ghi trùng lặp!");
+    }
 }
 
 app.Run();

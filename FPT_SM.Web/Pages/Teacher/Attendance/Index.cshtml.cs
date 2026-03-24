@@ -26,9 +26,14 @@ public class IndexModel : BasePageModel
     public AttendanceSheetDto? AttendanceSheet { get; set; }
     public List<AttendanceAlertDto> Alerts { get; set; } = new();
 
-    [BindProperty(SupportsGet = true)] public int? SelectedClassId { get; set; }
-    [BindProperty(SupportsGet = true)] public string? SelectedDate { get; set; }
-    [BindProperty] public MarkAttendanceDto Dto { get; set; } = new();
+    [BindProperty(SupportsGet = true, Name = "classId")]
+    public int? SelectedClassId { get; set; }
+    
+    [BindProperty(SupportsGet = true, Name = "selectedDate")]
+    public string? SelectedDate { get; set; }
+    
+    [BindProperty]
+    public MarkAttendanceDto Dto { get; set; } = new();
 
     public async Task<IActionResult> OnGetAsync()
     {

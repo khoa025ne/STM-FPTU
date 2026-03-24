@@ -68,8 +68,11 @@ public class AttendanceService : IAttendanceService
             var enrollment = await _enrollmentRepo.GetByIdAsync(item.EnrollmentId);
             if (enrollment == null || enrollment.Status == 5) continue;
 
+            // Check for existing attendance by date AND session number (to prevent duplicates)
             var existing = await _context.Attendances
-                .FirstOrDefaultAsync(a => a.EnrollmentId == item.EnrollmentId && a.SlotDate.Date == dto.Date.Date);
+                .FirstOrDefaultAsync(a => a.EnrollmentId == item.EnrollmentId 
+                    && a.SlotDate.Date == dto.Date.Date 
+                    && a.SessionNumber == dto.SessionNumber);
 
             if (existing != null)
             {
@@ -80,6 +83,17 @@ public class AttendanceService : IAttendanceService
             }
             else
             {
+                // Before adding new, delete any other records for same date (cleanup duplicates)
+                var duplicates = await _context.Attendances
+                    .Where(a => a.EnrollmentId == item.EnrollmentId 
+                        && a.SlotDate.Date == dto.Date.Date)
+                    .ToListAsync();
+                
+                if (duplicates.Count > 0)
+                {
+                    _context.Attendances.RemoveRange(duplicates);
+                }
+
                 _context.Attendances.Add(new Attendance
                 {
                     EnrollmentId = item.EnrollmentId,
