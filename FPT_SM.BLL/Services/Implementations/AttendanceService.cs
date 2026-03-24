@@ -25,10 +25,11 @@ public class AttendanceService : IAttendanceService
     {
         var enrollments = await _enrollmentRepo.GetByClassAsync(classId);
         var activeEnrollments = enrollments.Where(e => e.Status is 2 or 3);
-        var cls = await _context.Classes.Include(c => c.Subject).Include(c => c.Semester).FirstOrDefaultAsync(c => c.Id == classId);
+        var cls = await _context.Classes.Include(c => c.Subject).Include(c => c.Semester).Include(c => c.Slot).FirstOrDefaultAsync(c => c.Id == classId);
         if (cls == null) return null;
 
         var sessionNumber = await GetSessionNumberAsync(classId, date);
+        var totalSessions = CalculateTotalSessions(cls.Semester, cls.Slot);
         var items = new List<AttendanceDto>();
 
         foreach (var e in activeEnrollments)
@@ -57,6 +58,7 @@ public class AttendanceService : IAttendanceService
             SubjectName = cls.Subject?.Name ?? "",
             Date = date,
             SessionNumber = sessionNumber,
+            TotalSessions = totalSessions,
             Attendances = items
         };
     }
@@ -232,5 +234,29 @@ public class AttendanceService : IAttendanceService
             .Distinct()
             .CountAsync();
         return count + 1;
+    }
+
+    // Calculate total sessions based on semester dates and class schedule
+    private int CalculateTotalSessions(Semester? semester, Slot? slot)
+    {
+        if (semester == null || slot == null) return 20;  // Default to 20
+
+        var startDate = semester.StartDate;
+        var endDate = semester.EndDate;
+        var dayOfWeek = (DayOfWeek)slot.DayOfWeek;  // 1=Sunday, 2=Monday, etc.
+
+        int sessionCount = 0;
+        var currentDate = startDate;
+
+        while (currentDate <= endDate)
+        {
+            if (currentDate.DayOfWeek == dayOfWeek)
+            {
+                sessionCount++;
+            }
+            currentDate = currentDate.AddDays(1);
+        }
+
+        return Math.Max(sessionCount, 1);
     }
 }

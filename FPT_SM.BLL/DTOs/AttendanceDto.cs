@@ -29,6 +29,8 @@ public class AttendanceSheetDto
     public string SubjectName { get; set; } = null!;
     public DateTime Date { get; set; }
     public int SessionNumber { get; set; }
+    public int TotalSessions { get; set; } = 20;  // Total sessions in semester
+    public bool IsCompleted => SessionNumber > TotalSessions;  // All sessions completed
     public List<AttendanceDto> Attendances { get; set; } = new();
 }
 
