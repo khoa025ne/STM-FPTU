@@ -80,7 +80,7 @@ public class AppDbContext : DbContext
 
         modelBuilder.Entity<AcademicAnalysis>()
             .HasOne(a => a.Semester)
-            .WithMany()
+            .WithMany(s => s.AcademicAnalyses)
             .HasForeignKey(a => a.SemesterId)
             .OnDelete(DeleteBehavior.Restrict);
 

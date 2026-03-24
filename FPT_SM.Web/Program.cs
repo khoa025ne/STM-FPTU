@@ -27,6 +27,9 @@ builder.Services.AddHttpClient();
 
 var app = builder.Build();
 
+var runStartupDbInitialization = builder.Configuration.GetValue<bool>("Database:RunStartupInitialization");
+var resetDatabaseOnStartup = builder.Configuration.GetValue<bool>("Database:ResetOnStartup");
+
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Error");
@@ -46,19 +49,35 @@ app.MapRazorPages();
 
 try
 {
-    using (var scope = app.Services.CreateScope())
+    if (runStartupDbInitialization)
     {
+        using var scope = app.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        db.Database.SetCommandTimeout(TimeSpan.FromMinutes(3));
 
-        if (app.Environment.IsDevelopment())
+        var ensureSchema = resetDatabaseOnStartup;
+
+        if (resetDatabaseOnStartup)
         {
-            // Reset database to ensure schema matches current entities
+            Console.WriteLine("Resetting database on startup...");
             await db.Database.EnsureDeletedAsync();
-            await db.Database.EnsureCreatedAsync();
         }
-        else
+
+        if (!ensureSchema)
         {
-            // In production, only create if doesn't exist
+            try
+            {
+                _ = await db.Roles.AnyAsync();
+            }
+            catch (Exception ex) when (ex.Message.Contains("doesn't exist", StringComparison.OrdinalIgnoreCase))
+            {
+                ensureSchema = true;
+            }
+        }
+
+        if (ensureSchema)
+        {
+            Console.WriteLine("Ensuring database schema...");
             await db.Database.EnsureCreatedAsync();
         }
 
@@ -69,7 +88,7 @@ try
         var invalidDateAttendances = await db.Attendances
             .Where(a => a.SlotDate.Year < 2000)
             .ToListAsync();
-        
+
         if (invalidDateAttendances.Count > 0)
         {
             Console.WriteLine($"Xoá {invalidDateAttendances.Count} bản ghi điểm danh có ngày không hợp lệ...");
@@ -93,6 +112,10 @@ try
             await db.SaveChangesAsync();
             Console.WriteLine("Xoá xong bản ghi trùng lặp!");
         }
+    }
+    else
+    {
+        Console.WriteLine("Skipping startup database initialization. Set Database:RunStartupInitialization=true to enable.");
     }
 
     Console.WriteLine("Application initialized successfully!");
