@@ -16,6 +16,7 @@ public class DashboardService : IDashboardService
     private readonly ITransactionRepository _transactionRepo;
     private readonly IAttendanceRepository _attendanceRepo;
     private readonly IQuizRepository _quizRepo;
+    private readonly IEnrollmentService _enrollmentService;
     private readonly AppDbContext _context;
 
     public DashboardService(
@@ -27,6 +28,7 @@ public class DashboardService : IDashboardService
         ITransactionRepository transactionRepo,
         IAttendanceRepository attendanceRepo,
         IQuizRepository quizRepo,
+        IEnrollmentService enrollmentService,
         AppDbContext context)
     {
         _userRepo = userRepo;
@@ -37,6 +39,7 @@ public class DashboardService : IDashboardService
         _transactionRepo = transactionRepo;
         _attendanceRepo = attendanceRepo;
         _quizRepo = quizRepo;
+        _enrollmentService = enrollmentService;
         _context = context;
     }
 
@@ -219,6 +222,9 @@ public class DashboardService : IDashboardService
         var enrollments = await _enrollmentRepo.GetByStudentAsync(studentId,
             currentSemester?.Id);
 
+        // Get enrollment eligibility (current program semester)
+        var eligibility = await _enrollmentService.GetEnrollmentEligibilityAsync(studentId);
+
         var enrollmentDtos = new List<EnrollmentDto>();
         int totalAbsences = 0;
 
@@ -238,6 +244,7 @@ public class DashboardService : IDashboardService
                 SubjectName = e.Class?.Subject?.Name ?? "",
                 SemesterId = e.SemesterId,
                 SemesterName = e.Semester?.Name ?? "",
+                ProgramSemester = e.Class?.Subject?.ProgramSemester,
                 Status = e.Status,
                 EnrolledAt = e.EnrolledAt,
                 AbsentCount = absent,
@@ -304,6 +311,7 @@ public class DashboardService : IDashboardService
             WalletBalance = walletBalance,
             NewNotifications = 0,
             ActiveQuizzes = quizDtos.Count,
+            CurrentProgramSemester = eligibility.PayableProgramSemester,
             CurrentEnrollments = enrollmentDtos,
             UpcomingQuizzes = quizDtos,
             CurrentSemester = semesterDto

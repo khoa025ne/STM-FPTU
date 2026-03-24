@@ -13,6 +13,7 @@ public class StudentContextService : IStudentContextService
     private readonly ISemesterRepository _semesterRepo;
     private readonly IQuizRepository _quizRepo;
     private readonly IClassRepository _classRepo;
+    private readonly IEnrollmentService _enrollmentService;
 
     public StudentContextService(
         IUserRepository userRepo,
@@ -21,7 +22,8 @@ public class StudentContextService : IStudentContextService
         IAttendanceRepository attendanceRepo,
         ISemesterRepository semesterRepo,
         IQuizRepository quizRepo,
-        IClassRepository classRepo)
+        IClassRepository classRepo,
+        IEnrollmentService enrollmentService)
     {
         _userRepo = userRepo;
         _enrollmentRepo = enrollmentRepo;
@@ -30,6 +32,7 @@ public class StudentContextService : IStudentContextService
         _semesterRepo = semesterRepo;
         _quizRepo = quizRepo;
         _classRepo = classRepo;
+        _enrollmentService = enrollmentService;
     }
 
     public async Task<StudentContextDto> GetStudentContextAsync(int userId)
@@ -43,6 +46,9 @@ public class StudentContextService : IStudentContextService
         {
             // Fetch current semester
             var currentSemester = await _semesterRepo.GetOngoingSemesterAsync();
+
+            // Get enrollment eligibility (current program semester)
+            var eligibility = await _enrollmentService.GetEnrollmentEligibilityAsync(userId);
 
             // Fetch enrollments
             var enrollments = await _enrollmentRepo.GetByStudentAsync(userId);
@@ -128,6 +134,7 @@ public class StudentContextService : IStudentContextService
                 RollNumber = user.RollNumber ?? "N/A",
                 WalletBalance = user.WalletBalance,
                 CurrentSemester = currentSemester?.Name ?? "N/A",
+                CurrentProgramSemester = eligibility.PayableProgramSemester,
                 ActiveClasses = activeClasses,
                 RecentGrades = recentGrades,
                 AttendanceSummary = new AttendanceSummaryDto

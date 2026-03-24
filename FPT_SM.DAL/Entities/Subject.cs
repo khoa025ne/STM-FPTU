@@ -9,6 +9,8 @@ public class Subject
     public decimal Price { get; set; } = 6000000;
     public string? Description { get; set; }
     public bool IsActive { get; set; } = true;
+    // Chương trình SE gồm 9 kỳ (1..9), mỗi môn thuộc duy nhất 1 kỳ chương trình.
+    public int ProgramSemester { get; set; } = 1;
     public ICollection<Class> Classes { get; set; } = new List<Class>();
     public ICollection<Prerequisite> Prerequisites { get; set; } = new List<Prerequisite>();
     public ICollection<Prerequisite> IsPrerequisiteFor { get; set; } = new List<Prerequisite>();

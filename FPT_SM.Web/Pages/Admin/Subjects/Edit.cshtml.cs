@@ -58,6 +58,7 @@ public class EditModel : BasePageModel
             Credits = Subject.Credits,
             Description = Subject.Description,
             Price = Subject.Price,
+            ProgramSemester = Subject.ProgramSemester,
             IsActive = Subject.IsActive,
             PrerequisiteSubjectIds = Subject.Prerequisites?.Select(p => p.PrerequisiteSubjectId).ToList() ?? new List<int>()
         };
@@ -85,6 +86,11 @@ public class EditModel : BasePageModel
         else
         {
             UpdateDto.PrerequisiteSubjectIds = new List<int>();
+        }
+
+        if (UpdateDto.ProgramSemester is < 1 or > 9)
+        {
+            ModelState.AddModelError("UpdateDto.ProgramSemester", "Kỳ chương trình phải từ 1 đến 9.");
         }
 
         if (!ModelState.IsValid)

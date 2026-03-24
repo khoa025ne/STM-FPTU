@@ -12,6 +12,7 @@ public class EnrollmentDto
     public string SubjectName { get; set; } = null!;
     public int SemesterId { get; set; }
     public string SemesterName { get; set; } = null!;
+    public int? ProgramSemester { get; set; }
     public int Status { get; set; }
     public string StatusName => Status switch
     {
@@ -42,7 +43,15 @@ public class AvailableSubjectDto
     public string SubjectName { get; set; } = null!;
     public int Credits { get; set; }
     public decimal Price { get; set; }
+    public int ProgramSemester { get; set; }
     public bool PrerequisitesMet { get; set; }
     public List<string> MissingPrerequisites { get; set; } = new();
     public List<ClassDto> AvailableClasses { get; set; } = new();
+}
+
+public class EnrollmentEligibilityDto
+{
+    public int PayableProgramSemester { get; set; }
+    public bool CanEnroll { get; set; }
+    public string Message { get; set; } = string.Empty;
 }

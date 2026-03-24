@@ -36,6 +36,9 @@ public class SubjectService : ISubjectService
         if (await _subjectRepo.AnyAsync(s => s.Code == dto.Code))
             return ServiceResult<SubjectDto>.Failure($"Mã môn học '{dto.Code}' đã tồn tại.");
 
+        if (dto.ProgramSemester is < 1 or > 9)
+            return ServiceResult<SubjectDto>.Failure("Kỳ chương trình của môn học phải nằm trong khoảng 1 đến 9.");
+
         foreach (var prereqId in dto.PrerequisiteSubjectIds)
         {
             if (!await _subjectRepo.AnyAsync(s => s.Id == prereqId))
@@ -49,6 +52,7 @@ public class SubjectService : ISubjectService
             Credits = dto.Credits,
             Price = dto.Price,
             Description = dto.Description,
+            ProgramSemester = dto.ProgramSemester,
             IsActive = true
         };
         _context.Subjects.Add(subject);
@@ -70,6 +74,9 @@ public class SubjectService : ISubjectService
         if (await _subjectRepo.AnyAsync(s => s.Code == dto.Code && s.Id != id))
             return ServiceResult<SubjectDto>.Failure($"Mã môn học '{dto.Code}' đã được sử dụng.");
 
+        if (dto.ProgramSemester is < 1 or > 9)
+            return ServiceResult<SubjectDto>.Failure("Kỳ chương trình của môn học phải nằm trong khoảng 1 đến 9.");
+
         foreach (var prereqId in dto.PrerequisiteSubjectIds)
         {
             if (await HasCircularDependency(id, prereqId))
@@ -81,6 +88,7 @@ public class SubjectService : ISubjectService
         subject.Credits = dto.Credits;
         subject.Price = dto.Price;
         subject.Description = dto.Description;
+        subject.ProgramSemester = dto.ProgramSemester;
         subject.IsActive = dto.IsActive;
 
         var existingPrereqs = _context.Prerequisites.Where(p => p.SubjectId == id).ToList();
@@ -125,6 +133,7 @@ public class SubjectService : ISubjectService
         Price = s.Price,
         Description = s.Description,
         IsActive = s.IsActive,
+        ProgramSemester = s.ProgramSemester,
         Prerequisites = s.Prerequisites?.Select(p => new PrerequisiteDto
         {
             Id = p.Id,

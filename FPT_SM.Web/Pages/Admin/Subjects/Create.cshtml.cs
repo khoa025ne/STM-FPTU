@@ -61,6 +61,11 @@ public class CreateModel : BasePageModel
                 .ToList();
         }
 
+        if (CreateDto.ProgramSemester is < 1 or > 9)
+        {
+            ModelState.AddModelError("CreateDto.ProgramSemester", "Kỳ chương trình phải từ 1 đến 9.");
+        }
+
         if (!ModelState.IsValid)
             return Page();
 

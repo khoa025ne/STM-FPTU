@@ -217,16 +217,16 @@ public static class DbSeeder
         if (!await context.Subjects.AnyAsync())
         {
             context.Subjects.AddRange(
-                new Subject { Code = "PRX101", Name = "Lập trình C cơ bản", Credits = 3, Price = 6000000, Description = "Môn học nhập môn lập trình với ngôn ngữ C" },
-                new Subject { Code = "PRO102", Name = "Lập trình nâng cao", Credits = 3, Price = 6000000, Description = "Các kỹ thuật lập trình nâng cao" },
-                new Subject { Code = "PRO192", Name = "Lập trình OOP với Java", Credits = 3, Price = 6000000, Description = "Lập trình hướng đối tượng với Java" },
-                new Subject { Code = "DBI202", Name = "Nhập môn Cơ sở dữ liệu", Credits = 3, Price = 6000000, Description = "Thiết kế và quản lý cơ sở dữ liệu" },
-                new Subject { Code = "WED201", Name = "Lập trình Web cơ bản", Credits = 3, Price = 6000000, Description = "HTML, CSS, JavaScript cơ bản" },
-                new Subject { Code = "WED202", Name = "Lập trình Web nâng cao", Credits = 3, Price = 7000000, Description = "ASP.NET Core, Razor Pages" },
-                new Subject { Code = "MAE101", Name = "Toán cho Kỹ thuật", Credits = 3, Price = 6000000, Description = "Toán ứng dụng trong kỹ thuật phần mềm" },
-                new Subject { Code = "MOB201", Name = "Phát triển ứng dụng di động", Credits = 3, Price = 7000000, Description = "Lập trình Android và iOS" },
-                new Subject { Code = "SWA201", Name = "Kiến trúc phần mềm", Credits = 3, Price = 6500000, Description = "Các mẫu thiết kế và kiến trúc" },
-                new Subject { Code = "NET201", Name = "Mạng máy tính", Credits = 3, Price = 6000000, Description = "Cơ bản về mạng máy tính" }
+                new Subject { Code = "PRX101", Name = "Lập trình C cơ bản", Credits = 3, Price = 6000000, Description = "Môn học nhập môn lập trình với ngôn ngữ C", ProgramSemester = 1 },
+                new Subject { Code = "PRO102", Name = "Lập trình nâng cao", Credits = 3, Price = 6000000, Description = "Các kỹ thuật lập trình nâng cao", ProgramSemester = 2 },
+                new Subject { Code = "PRO192", Name = "Lập trình OOP với Java", Credits = 3, Price = 6000000, Description = "Lập trình hướng đối tượng với Java", ProgramSemester = 3 },
+                new Subject { Code = "DBI202", Name = "Nhập môn Cơ sở dữ liệu", Credits = 3, Price = 6000000, Description = "Thiết kế và quản lý cơ sở dữ liệu", ProgramSemester = 2 },
+                new Subject { Code = "WED201", Name = "Lập trình Web cơ bản", Credits = 3, Price = 6000000, Description = "HTML, CSS, JavaScript cơ bản", ProgramSemester = 3 },
+                new Subject { Code = "WED202", Name = "Lập trình Web nâng cao", Credits = 3, Price = 7000000, Description = "ASP.NET Core, Razor Pages", ProgramSemester = 4 },
+                new Subject { Code = "MAE101", Name = "Toán cho Kỹ thuật", Credits = 3, Price = 6000000, Description = "Toán ứng dụng trong kỹ thuật phần mềm", ProgramSemester = 1 },
+                new Subject { Code = "MOB201", Name = "Phát triển ứng dụng di động", Credits = 3, Price = 7000000, Description = "Lập trình Android và iOS", ProgramSemester = 5 },
+                new Subject { Code = "SWA201", Name = "Kiến trúc phần mềm", Credits = 3, Price = 6500000, Description = "Các mẫu thiết kế và kiến trúc", ProgramSemester = 5 },
+                new Subject { Code = "NET201", Name = "Mạng máy tính", Credits = 3, Price = 6000000, Description = "Cơ bản về mạng máy tính", ProgramSemester = 4 }
             );
             await context.SaveChangesAsync();
 

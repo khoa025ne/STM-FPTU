@@ -7,6 +7,7 @@ public class StudentContextDto
     public string RollNumber { get; set; } = null!;
     public decimal WalletBalance { get; set; }
     public string CurrentSemester { get; set; } = "N/A";
+    public int CurrentProgramSemester { get; set; } = 1;
 
     public List<ActiveClassDto> ActiveClasses { get; set; } = new();
     public List<GradeInfoDto> RecentGrades { get; set; } = new();

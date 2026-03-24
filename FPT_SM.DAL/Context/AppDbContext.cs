@@ -117,6 +117,10 @@ public class AppDbContext : DbContext
             .HasForeignKey(t => t.UserId)
             .OnDelete(DeleteBehavior.Restrict);
 
+        // Subject ProgramSemester constraint (1-9)
+        modelBuilder.Entity<Subject>()
+            .HasCheckConstraint("CK_Subject_ProgramSemester_Range", "`ProgramSemester` >= 1 AND `ProgramSemester` <= 9");
+
         // Decimal precision
         modelBuilder.Entity<User>().Property(u => u.WalletBalance).HasPrecision(18, 2);
         modelBuilder.Entity<Grade>().Property(g => g.MidtermScore).HasPrecision(4, 1);

@@ -48,6 +48,7 @@ public class StudentDashboardDto
     public decimal WalletBalance { get; set; }
     public int NewNotifications { get; set; }
     public int ActiveQuizzes { get; set; }
+    public int CurrentProgramSemester { get; set; } = 1;
     public List<EnrollmentDto> CurrentEnrollments { get; set; } = new();
     public List<QuizDto> UpcomingQuizzes { get; set; } = new();
     public SemesterDto? CurrentSemester { get; set; }

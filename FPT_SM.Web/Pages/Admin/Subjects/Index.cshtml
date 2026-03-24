@@ -99,6 +99,7 @@
                         <th class="px-5 py-3.5 text-left">Mã môn</th>
                         <th class="px-5 py-3.5 text-left">Tên môn học</th>
                         <th class="px-5 py-3.5 text-left">Tín chỉ</th>
+                        <th class="px-5 py-3.5 text-left">Kỳ CT</th>
                         <th class="px-5 py-3.5 text-left">Học phí</th>
                         <th class="px-5 py-3.5 text-left">Môn tiên quyết</th>
                         <th class="px-5 py-3.5 text-left">Dùng cho lớp/kì</th>
@@ -124,6 +125,9 @@
                             </td>
                             <td class="px-5 py-3.5">
                                 <span class="inline-flex items-center justify-center w-7 h-7 rounded-full bg-sky-100 text-sky-700 text-xs font-bold">@sub.Credits</span>
+                            </td>
+                            <td class="px-5 py-3.5">
+                                <span class="inline-flex items-center justify-center px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-600 text-xs font-bold">Kỳ @sub.ProgramSemester</span>
                             </td>
                             <td class="px-5 py-3.5 text-slate-700 font-medium">
                                 @sub.Price.ToString("N0") VNĐ
