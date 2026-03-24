@@ -14,8 +14,28 @@ public static class DbSeeder
         using var scope = serviceProvider.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
+        var hasRoles = false;
+        try
+        {
+            hasRoles = await context.Roles.AnyAsync();
+        }
+        catch (Exception ex) when (IsMissingTableError(ex))
+        {
+            try
+            {
+                await context.Database.EnsureDeletedAsync();
+                await context.Database.EnsureCreatedAsync();
+            }
+            catch
+            {
+                await context.Database.EnsureCreatedAsync();
+            }
+
+            hasRoles = await context.Roles.AnyAsync();
+        }
+
         // ==================== SEED ROLES ====================
-        if (!await context.Roles.AnyAsync())
+        if (!hasRoles)
         {
             context.Roles.AddRange(
                 new Role { Id = 1, Name = "Admin", Description = "Quản trị viên hệ thống" },
@@ -217,16 +237,40 @@ public static class DbSeeder
         if (!await context.Subjects.AnyAsync())
         {
             context.Subjects.AddRange(
+                // Program semester 1
                 new Subject { Code = "PRX101", Name = "Lập trình C cơ bản", Credits = 3, Price = 6000000, Description = "Môn học nhập môn lập trình với ngôn ngữ C", ProgramSemester = 1 },
-                new Subject { Code = "PRO102", Name = "Lập trình nâng cao", Credits = 3, Price = 6000000, Description = "Các kỹ thuật lập trình nâng cao", ProgramSemester = 2 },
-                new Subject { Code = "PRO192", Name = "Lập trình OOP với Java", Credits = 3, Price = 6000000, Description = "Lập trình hướng đối tượng với Java", ProgramSemester = 3 },
-                new Subject { Code = "DBI202", Name = "Nhập môn Cơ sở dữ liệu", Credits = 3, Price = 6000000, Description = "Thiết kế và quản lý cơ sở dữ liệu", ProgramSemester = 2 },
-                new Subject { Code = "WED201", Name = "Lập trình Web cơ bản", Credits = 3, Price = 6000000, Description = "HTML, CSS, JavaScript cơ bản", ProgramSemester = 3 },
-                new Subject { Code = "WED202", Name = "Lập trình Web nâng cao", Credits = 3, Price = 7000000, Description = "ASP.NET Core, Razor Pages", ProgramSemester = 4 },
                 new Subject { Code = "MAE101", Name = "Toán cho Kỹ thuật", Credits = 3, Price = 6000000, Description = "Toán ứng dụng trong kỹ thuật phần mềm", ProgramSemester = 1 },
+                new Subject { Code = "CSI101", Name = "Kỹ năng CNTT cơ bản", Credits = 3, Price = 5500000, Description = "Nền tảng kỹ năng công nghệ thông tin", ProgramSemester = 1 },
+                new Subject { Code = "SSC101", Name = "Kỹ năng mềm cho sinh viên", Credits = 2, Price = 4500000, Description = "Giao tiếp và làm việc nhóm", ProgramSemester = 1 },
+                new Subject { Code = "ENG101", Name = "Tiếng Anh học thuật 1", Credits = 3, Price = 5000000, Description = "Tiếng Anh cơ bản cho đại học", ProgramSemester = 1 },
+
+                // Program semester 2
+                new Subject { Code = "PRO102", Name = "Lập trình nâng cao", Credits = 3, Price = 6000000, Description = "Các kỹ thuật lập trình nâng cao", ProgramSemester = 2 },
+                new Subject { Code = "DBI202", Name = "Nhập môn Cơ sở dữ liệu", Credits = 3, Price = 6000000, Description = "Thiết kế và quản lý cơ sở dữ liệu", ProgramSemester = 2 },
+                new Subject { Code = "OSG202", Name = "Nguyên lý hệ điều hành", Credits = 3, Price = 6200000, Description = "Kiến trúc và cơ chế hệ điều hành", ProgramSemester = 2 },
+                new Subject { Code = "MAD202", Name = "Toán rời rạc", Credits = 3, Price = 5800000, Description = "Nền tảng toán cho khoa học máy tính", ProgramSemester = 2 },
+                new Subject { Code = "ENG102", Name = "Tiếng Anh học thuật 2", Credits = 3, Price = 5000000, Description = "Tiếng Anh học thuật nâng cao", ProgramSemester = 2 },
+
+                // Program semester 3
+                new Subject { Code = "PRO192", Name = "Lập trình OOP với Java", Credits = 3, Price = 6000000, Description = "Lập trình hướng đối tượng với Java", ProgramSemester = 3 },
+                new Subject { Code = "WED201", Name = "Lập trình Web cơ bản", Credits = 3, Price = 6000000, Description = "HTML, CSS, JavaScript cơ bản", ProgramSemester = 3 },
+                new Subject { Code = "DSA301", Name = "Cấu trúc dữ liệu và giải thuật", Credits = 3, Price = 6500000, Description = "Thuật toán và cấu trúc dữ liệu", ProgramSemester = 3 },
+                new Subject { Code = "PRM301", Name = "Lập trình .NET cơ bản", Credits = 3, Price = 6200000, Description = "Nền tảng phát triển ứng dụng .NET", ProgramSemester = 3 },
+                new Subject { Code = "NWC301", Name = "Mạng máy tính cơ bản", Credits = 3, Price = 6000000, Description = "Nền tảng truyền thông mạng", ProgramSemester = 3 },
+
+                // Program semester 4
+                new Subject { Code = "WED202", Name = "Lập trình Web nâng cao", Credits = 3, Price = 7000000, Description = "ASP.NET Core, Razor Pages", ProgramSemester = 4 },
+                new Subject { Code = "NET201", Name = "Mạng máy tính", Credits = 3, Price = 6000000, Description = "Cơ bản về mạng máy tính", ProgramSemester = 4 },
+                new Subject { Code = "SWT401", Name = "Kiểm thử phần mềm", Credits = 3, Price = 6500000, Description = "Kỹ thuật và quy trình kiểm thử", ProgramSemester = 4 },
+                new Subject { Code = "PRN401", Name = "Lập trình ứng dụng nâng cao", Credits = 3, Price = 6800000, Description = "Xây dựng ứng dụng thực tế", ProgramSemester = 4 },
+                new Subject { Code = "DBI302", Name = "Quản trị cơ sở dữ liệu", Credits = 3, Price = 6500000, Description = "Tối ưu và vận hành database", ProgramSemester = 4 },
+
+                // Program semester 5
                 new Subject { Code = "MOB201", Name = "Phát triển ứng dụng di động", Credits = 3, Price = 7000000, Description = "Lập trình Android và iOS", ProgramSemester = 5 },
                 new Subject { Code = "SWA201", Name = "Kiến trúc phần mềm", Credits = 3, Price = 6500000, Description = "Các mẫu thiết kế và kiến trúc", ProgramSemester = 5 },
-                new Subject { Code = "NET201", Name = "Mạng máy tính", Credits = 3, Price = 6000000, Description = "Cơ bản về mạng máy tính", ProgramSemester = 4 }
+                new Subject { Code = "MLN501", Name = "Nhập môn máy học", Credits = 3, Price = 7200000, Description = "Các kỹ thuật machine learning cơ bản", ProgramSemester = 5 },
+                new Subject { Code = "CLD501", Name = "Điện toán đám mây", Credits = 3, Price = 7000000, Description = "Triển khai và vận hành trên cloud", ProgramSemester = 5 },
+                new Subject { Code = "CPS501", Name = "Đồ án chuyên ngành", Credits = 4, Price = 8000000, Description = "Dự án tích hợp kiến thức chuyên ngành", ProgramSemester = 5 }
             );
             await context.SaveChangesAsync();
 
@@ -235,9 +279,16 @@ public static class DbSeeder
             {
                 ("PRO102", "PRX101"),
                 ("PRO192", "PRX101"),
+                ("DSA301", "PRO102"),
+                ("PRM301", "PRO192"),
                 ("WED202", "WED201"),
+                ("PRN401", "PRO192"),
+                ("DBI302", "DBI202"),
                 ("MOB201", "PRO192"),
-                ("SWA201", "PRO192")
+                ("SWA201", "PRO192"),
+                ("MLN501", "DSA301"),
+                ("CLD501", "PRN401"),
+                ("CPS501", "SWA201")
             };
 
             foreach (var (subject, prereq) in prerequisites)
@@ -277,20 +328,35 @@ public static class DbSeeder
         {
             var fa25 = await context.Semesters.FirstAsync(s => s.Code == "FA25");
             var teachers = await context.Users.Where(u => u.RoleId == 3).ToListAsync();
-            var subjects = await context.Subjects.ToListAsync();
+            var subjects = await context.Subjects.OrderBy(s => s.ProgramSemester).ThenBy(s => s.Code).ToListAsync();
             var slots = await context.Slots.ToListAsync();
 
-            var classes = new List<Class>
+            var classes = new List<Class>();
+            for (int i = 0; i < subjects.Count; i++)
             {
-                new Class { Name = "PRX101_C01", SubjectId = subjects[0].Id, TeacherId = teachers[0].Id, SemesterId = fa25.Id, SlotId = slots[0].Id, Capacity = 30, Enrolled = 5, Status = 2, RoomNumber = "B2.01" },
-                new Class { Name = "PRX101_C02", SubjectId = subjects[0].Id, TeacherId = teachers[1].Id, SemesterId = fa25.Id, SlotId = slots[2].Id, Capacity = 30, Enrolled = 3, Status = 2, RoomNumber = "B2.02" },
-                new Class { Name = "PRO102_C01", SubjectId = subjects[1].Id, TeacherId = teachers[1].Id, SemesterId = fa25.Id, SlotId = slots[1].Id, Capacity = 25, Enrolled = 4, Status = 2, RoomNumber = "B2.03" },
-                new Class { Name = "PRO192_C01", SubjectId = subjects[2].Id, TeacherId = teachers[0].Id, SemesterId = fa25.Id, SlotId = slots[4].Id, Capacity = 30, Enrolled = 4, Status = 2, RoomNumber = "B2.04" },
-                new Class { Name = "DBI202_C01", SubjectId = subjects[3].Id, TeacherId = teachers[2].Id, SemesterId = fa25.Id, SlotId = slots[5].Id, Capacity = 30, Enrolled = 6, Status = 2, RoomNumber = "B2.05" },
-                new Class { Name = "WED201_C01", SubjectId = subjects[4].Id, TeacherId = teachers[1].Id, SemesterId = fa25.Id, SlotId = slots[3].Id, Capacity = 25, Enrolled = 5, Status = 2, RoomNumber = "B2.06" },
-                new Class { Name = "WED202_C01", SubjectId = subjects[5].Id, TeacherId = teachers[2].Id, SemesterId = fa25.Id, SlotId = slots[6].Id, Capacity = 20, Enrolled = 3, Status = 2, RoomNumber = "B2.07" },
-                new Class { Name = "SWA201_C01", SubjectId = subjects[8].Id, TeacherId = teachers[0].Id, SemesterId = fa25.Id, SlotId = slots[7].Id, Capacity = 25, Enrolled = 2, Status = 2, RoomNumber = "B3.01" }
-            };
+                var subject = subjects[i];
+                for (int section = 1; section <= 2; section++)
+                {
+                    var teacher = teachers[(i + section - 1) % teachers.Count];
+                    var slot = slots[(i * 2 + section - 1) % slots.Count];
+                    var capacity = section == 1 ? 30 : 25;
+                    var enrolled = Math.Min(capacity - 2, 2 + ((i + section) % 5));
+
+                    classes.Add(new Class
+                    {
+                        Name = $"{subject.Code}_C{section:00}",
+                        SubjectId = subject.Id,
+                        TeacherId = teacher.Id,
+                        SemesterId = fa25.Id,
+                        SlotId = slot.Id,
+                        Capacity = capacity,
+                        Enrolled = enrolled,
+                        Status = 2,
+                        RoomNumber = $"B{2 + (i % 3)}.{(i + section):00}"
+                    });
+                }
+            }
+
             context.Classes.AddRange(classes);
             await context.SaveChangesAsync();
         }
@@ -889,5 +955,19 @@ public static class DbSeeder
         using var hmac = new HMACSHA512(Encoding.UTF8.GetBytes(email));
         var hash = hmac.ComputeHash(Encoding.UTF8.GetBytes(password));
         return Convert.ToBase64String(hash);
+    }
+
+    private static bool IsMissingTableError(Exception ex)
+    {
+        for (var current = ex; current != null; current = current.InnerException)
+        {
+            if (current.Message.Contains("doesn't exist", StringComparison.OrdinalIgnoreCase) ||
+                current.Message.Contains("1146", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

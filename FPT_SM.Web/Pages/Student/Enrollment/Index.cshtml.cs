@@ -66,17 +66,24 @@ public class IndexModel : BasePageModel
         return Page();
     }
 
-    public async Task<IActionResult> OnPostEnrollAsync(int classId, int semesterId)
+    public async Task<IActionResult> OnPostEnrollAsync(List<int> classIds, int semesterId)
     {
         var auth = RequireRole("Student");
         if (auth != null) return auth;
 
         var userId = CurrentUserId!.Value;
 
+        classIds = classIds?.Where(id => id > 0).Distinct().ToList() ?? new List<int>();
+        if (!classIds.Any())
+        {
+            TempData["ErrorMessage"] = "Vui lòng chọn ít nhất 1 lớp để đăng ký.";
+            return RedirectToPage();
+        }
+
         var dto = new EnrollRegistrationDto
         {
             SemesterId = semesterId,
-            ClassIds = new List<int> { classId }
+            ClassIds = classIds
         };
 
         var result = await _enrollmentService.ProcessEnrollmentAsync(userId, dto);
@@ -91,10 +98,11 @@ public class IndexModel : BasePageModel
 
             // Fetch class info for cross-role broadcasting
             var classService = HttpContext.RequestServices.GetRequiredService<IClassService>();
-            var classInfo = await classService.GetByIdAsync(classId);
-
-            if (classInfo != null)
+            foreach (var classId in classIds)
             {
+                var classInfo = await classService.GetByIdAsync(classId);
+                if (classInfo == null) continue;
+
                 // Notify teacher (roster change)
                 await _hub.Clients.Group($"teacher_{classInfo.TeacherId}")
                     .SendAsync("EnrollmentChanged", new

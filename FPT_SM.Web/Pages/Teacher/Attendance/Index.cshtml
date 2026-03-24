@@ -5,6 +5,7 @@
     ViewData["Title"] = "Điểm danh";
     var sheet = Model.AttendanceSheet;
     var alertMap = Model.Alerts.ToDictionary(a => a.StudentId, a => a);
+    var isFutureSession = sheet != null && sheet.Date.Date > DateTime.Today;
 }
 
 @if (TempData["Success"] != null)
@@ -40,7 +41,7 @@
                 @foreach (var cls in Model.MyClasses)
                 {
                     var isSelected = Model.SelectedClassId == cls.Id;
-                    <a href="?classId=@cls.Id&selectedDate=@DateTime.Today.ToString("yyyy-MM-dd")"
+                    <a href="?classId=@cls.Id"
                        class="flex items-start gap-3 px-4 py-4 border-b border-slate-50 hover:bg-slate-50 transition-colors cursor-pointer
                               @(isSelected ? "bg-fpt-navy/5 border-l-4 border-l-fpt-orange" : "border-l-4 border-l-transparent")">
                         <div class="w-9 h-9 rounded-xl @(isSelected ? "bg-fpt-navy" : "bg-slate-100") flex items-center justify-center flex-shrink-0 mt-0.5 transition-colors">
@@ -87,14 +88,21 @@
                                 &nbsp;·&nbsp; @sheet.Date.ToString("dddd, dd/MM/yyyy")
                             </p>
                         </div>
-                        <!-- Date picker -->
+                        <!-- Session selector from actual class schedule -->
                         <form method="get" class="flex items-center gap-2">
                             <input type="hidden" name="classId" value="@Model.SelectedClassId" />
-                            <label class="text-white/70 text-sm font-medium">Chọn ngày:</label>
-                            <input type="date" name="selectedDate"
-                                   value="@(string.IsNullOrEmpty(Model.SelectedDate) ? DateTime.Today.ToString("yyyy-MM-dd") : Model.SelectedDate)"
-                                   class="text-sm bg-white/10 text-white border border-white/20 rounded-xl px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-white/40"
-                                   onchange="this.form.submit()" />
+                            <label class="text-white/70 text-sm font-medium">Chọn buổi:</label>
+                            <select name="selectedSession"
+                                    class="text-sm bg-white text-slate-900 border border-white/20 rounded-xl px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-white/40"
+                                    onchange="this.form.submit()">
+                                @foreach (var opt in Model.SessionOptions)
+                                {
+                                    var selected = Model.SelectedSession == opt.SessionNumber;
+                                    <option value="@opt.SessionNumber" selected="@selected" class="text-slate-900 bg-white">
+                                        @opt.DisplayText @(opt.IsFuture ? "(Sắp tới)" : "")
+                                    </option>
+                                }
+                            </select>
                         </form>
                     </div>
                 </div>
@@ -234,6 +242,10 @@
                             {
                                 <span class="text-amber-600 font-semibold">✓ Đã hoàn thành tất cả @sheet.TotalSessions buổi học</span>
                             }
+                            else if (isFutureSession)
+                            {
+                                <span class="text-sky-600 font-semibold">Buổi này chưa diễn ra. Chỉ có thể điểm danh khi đến ngày học.</span>
+                            }
                             else
                             {
                                 <span>Buổi <strong class="text-fpt-navy">@sheet.SessionNumber</strong> / @sheet.TotalSessions</span>
@@ -242,10 +254,10 @@
                             }
                         </div>
                         <button type="submit"
-                                class="flex items-center gap-2 @(sheet.IsCompleted ? "bg-slate-300 text-slate-600 cursor-not-allowed" : "bg-fpt-navy hover:bg-blue-900 active:scale-95 text-white") font-semibold px-6 py-2.5 rounded-xl transition-all shadow-sm"
-                                @(sheet.IsCompleted ? "disabled" : "")>
-                            <i data-lucide="@(sheet.IsCompleted ? "check" : "save")" class="w-4 h-4"></i>
-                            @(sheet.IsCompleted ? "Hoàn thành" : "Lưu điểm danh")
+                                class="flex items-center gap-2 @((sheet.IsCompleted || isFutureSession) ? "bg-slate-300 text-slate-600 cursor-not-allowed" : "bg-fpt-navy hover:bg-blue-900 active:scale-95 text-white") font-semibold px-6 py-2.5 rounded-xl transition-all shadow-sm"
+                                @((sheet.IsCompleted || isFutureSession) ? "disabled" : "")>
+                            <i data-lucide="@((sheet.IsCompleted || isFutureSession) ? "check" : "save")" class="w-4 h-4"></i>
+                            @((sheet.IsCompleted || isFutureSession) ? "Không thể lưu" : "Lưu điểm danh")
                         </button>
                     </div>
                 </form>

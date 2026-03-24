@@ -45,7 +45,7 @@
     <i data-lucide="info" class="w-4 h-4 text-blue-500 flex-shrink-0"></i>
     <p class="text-blue-700 text-sm">
         <strong>Học phí:</strong> Mỗi môn học tương đương với học phí được xác định theo tín chỉ.
-        Số dư ví sẽ bị trừ ngay khi đăng ký thành công. Tối đa <strong>5 môn/học kỳ</strong>.
+        Chọn nhiều môn trong kỳ rồi thanh toán 1 lần. Tối đa <strong>5 môn/học kỳ</strong>.
     </p>
 </div>
 
@@ -179,7 +179,7 @@
         }
         else
         {
-            <div class="divide-y divide-slate-100">
+            <div class="divide-y divide-slate-100" id="available-subjects">
                 @foreach (var subject in Model.AvailableSubjects)
                 {
                     <div class="p-5">
@@ -226,8 +226,8 @@
                             <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
                                 @foreach (var cls in subject.AvailableClasses)
                                 {
-                                    var canEnroll = subject.PrerequisitesMet && subject.Price <= (Model.Wallet?.Balance ?? 0);
-                                    <div class="border-2 @(canEnroll ? "border-slate-200 hover:border-fpt-navy" : "border-slate-100 opacity-60") rounded-xl p-3 transition-all">
+                                    var canSelect = subject.PrerequisitesMet;
+                                    <div class="border-2 @(canSelect ? "border-slate-200 hover:border-fpt-navy" : "border-slate-100 opacity-60") rounded-xl p-3 transition-all">
                                         <div class="flex items-start justify-between gap-2 mb-2">
                                             <div>
                                                 <p class="font-bold text-slate-800 text-sm">@cls.Name</p>
@@ -258,14 +258,19 @@
                                                 Còn @cls.AvailableSlots chỗ trống
                                             </span>
                                         </div>
-                                        @if (canEnroll)
+                                        @if (canSelect)
                                         {
-                                            <button type="button"
-                                                    onclick="confirmEnroll(@cls.Id, '@subject.SubjectName', @subject.Price, @Model.CurrentSemester.Id)"
-                                                    class="w-full bg-fpt-navy hover:bg-blue-800 text-white text-xs font-bold py-2 px-3 rounded-lg transition-colors flex items-center justify-center gap-1.5">
-                                                <i data-lucide="plus" class="w-3 h-3"></i>
-                                                Đăng ký – @subject.Price.ToString("N0") ₫
-                                            </button>
+                                            <label class="w-full flex items-center gap-2 text-xs font-semibold text-slate-700 cursor-pointer">
+                                                <input type="radio"
+                                                       name="subject_@subject.SubjectId"
+                                                       class="subject-class-selector accent-fpt-navy"
+                                                       data-subject-id="@subject.SubjectId"
+                                                       data-subject-name="@subject.SubjectName"
+                                                       data-class-id="@cls.Id"
+                                                       data-price="@subject.Price"
+                                                       data-class-name="@cls.Name" />
+                                                Chọn lớp này - @subject.Price.ToString("N0") ₫
+                                            </label>
                                         }
                                         else
                                         {
@@ -288,13 +293,26 @@
                     </div>
                 }
             </div>
+
+            <div class="px-5 py-4 border-t border-slate-100 bg-slate-50 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                <div>
+                    <p class="text-sm font-semibold text-slate-700">Đã chọn: <span id="selected-count">0</span> môn</p>
+                    <p class="text-xs text-slate-500">Tổng học phí: <span id="selected-total" class="font-bold text-fpt-orange">0 ₫</span></p>
+                </div>
+                <button type="button"
+                        onclick="confirmEnrollBatch(@Model.CurrentSemester.Id)"
+                        class="bg-fpt-navy hover:bg-blue-800 text-white text-sm font-bold py-2.5 px-4 rounded-lg transition-colors flex items-center justify-center gap-2">
+                    <i data-lucide="credit-card" class="w-4 h-4"></i>
+                    Thanh toán các môn đã chọn
+                </button>
+            </div>
         }
     </div>
 }
 
 <!-- Hidden forms -->
 <form id="enrollForm" method="post" asp-page-handler="Enroll" class="hidden">
-    <input type="hidden" name="classId" id="enrollClassId" />
+    <div id="selectedClassIds"></div>
     <input type="hidden" name="semesterId" id="enrollSemesterId" />
 </form>
 <form id="dropForm" method="post" asp-page-handler="Drop" class="hidden">
@@ -305,27 +323,86 @@
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.all.min.js"></script>
 <script src="~/lib/microsoft/signalr/dist/browser/signalr.min.js"></script>
 <script>
-    function confirmEnroll(classId, subjectName, price, semesterId) {
+    function formatCurrency(v) {
+        return Number(v).toLocaleString('vi-VN') + ' ₫';
+    }
+
+    function getSelectedClassItems() {
+        const radios = document.querySelectorAll('.subject-class-selector:checked');
+        const items = [];
+        radios.forEach(r => {
+            items.push({
+                subjectName: r.dataset.subjectName,
+                className: r.dataset.className,
+                classId: Number(r.dataset.classId),
+                price: Number(r.dataset.price)
+            });
+        });
+        return items;
+    }
+
+    function refreshSelectionSummary() {
+        const items = getSelectedClassItems();
+        const total = items.reduce((s, x) => s + x.price, 0);
+        const countEl = document.getElementById('selected-count');
+        const totalEl = document.getElementById('selected-total');
+        if (countEl) countEl.textContent = items.length;
+        if (totalEl) totalEl.textContent = formatCurrency(total);
+    }
+
+    function confirmEnrollBatch(semesterId) {
+        const items = getSelectedClassItems();
+        if (!items.length) {
+            Swal.fire({
+                icon: 'info',
+                title: 'Chưa chọn môn học',
+                text: 'Vui lòng chọn ít nhất 1 lớp trước khi thanh toán.'
+            });
+            return;
+        }
+
+        if (items.length > 5) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Vượt giới hạn',
+                text: 'Bạn chỉ có thể đăng ký tối đa 5 môn trong một học kỳ.'
+            });
+            return;
+        }
+
+        const total = items.reduce((s, x) => s + x.price, 0);
+        const rows = items.map(x => `<li>${x.subjectName} - <strong>${x.className}</strong> (${formatCurrency(x.price)})</li>`).join('');
+
         Swal.fire({
-            title: 'Xác nhận đăng ký',
+            title: 'Xác nhận thanh toán học phần',
             html: `<div class="text-left">
-                <p class="text-slate-700 mb-2">Bạn có chắc muốn đăng ký môn:</p>
-                <p class="font-bold text-fpt-navy text-lg mb-3">${subjectName}</p>
+                <p class="text-slate-700 mb-2">Bạn đã chọn các lớp sau:</p>
+                <ul class="list-disc pl-5 text-sm text-slate-700 mb-3">${rows}</ul>
                 <div class="bg-amber-50 border border-amber-200 rounded-xl p-3">
-                    <p class="text-amber-700 text-sm font-semibold">💰 Học phí sẽ bị trừ: <strong>${Number(price).toLocaleString('vi-VN')} ₫</strong></p>
+                    <p class="text-amber-700 text-sm font-semibold">💰 Tổng học phí sẽ bị trừ: <strong>${formatCurrency(total)}</strong></p>
                 </div>
             </div>`,
             icon: 'question',
             showCancelButton: true,
-            confirmButtonText: '✅ Xác nhận đăng ký',
+            confirmButtonText: '✅ Xác nhận thanh toán',
             cancelButtonText: '❌ Hủy',
             confirmButtonColor: '#003087',
             cancelButtonColor: '#6b7280',
             customClass: { popup: 'rounded-2xl' }
         }).then(result => {
             if (result.isConfirmed) {
-                document.getElementById('enrollClassId').value = classId;
                 document.getElementById('enrollSemesterId').value = semesterId;
+
+                const container = document.getElementById('selectedClassIds');
+                container.innerHTML = '';
+                items.forEach(x => {
+                    const input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = 'classIds';
+                    input.value = x.classId;
+                    container.appendChild(input);
+                });
+
                 document.getElementById('enrollForm').submit();
             }
         });
@@ -406,5 +483,10 @@
         connection.invoke("JoinGroup", "student_" + userId);
         connection.invoke("JoinGroup", "student_all");
     }).catch(console.error);
+
+    document.querySelectorAll('.subject-class-selector').forEach(r => {
+        r.addEventListener('change', refreshSelectionSummary);
+    });
+    refreshSelectionSummary();
 </script>
 }

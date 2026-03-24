@@ -24,6 +24,7 @@
     </div>
 </div>
 
+<div id="student-attendance-content">
 <!-- Summary Stats -->
 @if (summaries.Any())
 {
@@ -81,6 +82,10 @@
                             <h3 class="font-bold text-slate-800 text-base">@summary.SubjectName</h3>
                             <p class="text-sm text-slate-400 mt-0.5">
                                 <span class="font-mono bg-slate-100 px-1.5 py-0.5 rounded text-xs">@summary.SubjectCode</span>
+                                @if (!string.IsNullOrWhiteSpace(summary.ClassName))
+                                {
+                                    <span class="ml-2 font-mono bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded text-xs">@summary.ClassName</span>
+                                }
                             </p>
                         </div>
                     </div>
@@ -192,7 +197,7 @@
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-slate-50">
-                                    @foreach (var session in summary.Sessions.OrderBy(s => s.SessionNumber))
+                                    @foreach (var session in summary.Sessions.OrderBy(s => s.SlotDate).ThenBy(s => s.SessionNumber))
                                     {
                                         <tr class="hover:bg-slate-50 transition-colors">
                                             <td class="px-4 py-2.5 text-slate-500 font-medium">Buổi @session.SessionNumber</td>
@@ -232,6 +237,7 @@ else
         </a>
     </div>
 }
+</div>
 
 @section Scripts {
 <script>
@@ -240,7 +246,47 @@ else
         try {
             const userId = @(Model.CurrentUserId ?? 0);
             const attendanceConn = await signalRManager.connect('attendance', '/hubs/attendance');
-            await attendanceConn.invoke('JoinGroup', `student_${userId}`);
+            const groupName = `student_${userId}`;
+            const refreshAttendanceContent = async () => {
+                const currentContainer = document.querySelector('#student-attendance-content');
+                if (!currentContainer) return;
+
+                try {
+                    const response = await fetch(window.location.href, {
+                        method: 'GET',
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'Cache-Control': 'no-cache'
+                        }
+                    });
+
+                    if (!response.ok) return;
+
+                    const html = await response.text();
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(html, 'text/html');
+                    const newContainer = doc.querySelector('#student-attendance-content');
+
+                    if (!newContainer) return;
+
+                    currentContainer.innerHTML = newContainer.innerHTML;
+                    if (window.lucide && typeof window.lucide.createIcons === 'function') {
+                        window.lucide.createIcons();
+                    }
+                } catch (err) {
+                    console.warn('Refresh attendance content error:', err);
+                }
+            };
+
+            await attendanceConn.invoke('JoinGroup', groupName);
+            attendanceConn.onreconnected(async () => {
+                try {
+                    await attendanceConn.invoke('JoinGroup', groupName);
+                } catch (err) {
+                    console.warn('Rejoin SignalR group failed:', err);
+                }
+            });
+
             attendanceConn.on('StudentFailedByAbsence', data => {
                 if (data.studentId === userId) {
                     Swal.fire({
@@ -252,8 +298,10 @@ else
                     }).then(() => location.reload());
                 }
             });
-            attendanceConn.on('AttendanceUpdated', data => {
+            attendanceConn.on('AttendanceUpdated', async data => {
+                if (data?.studentId && data.studentId !== userId) return;
                 showToast('Điểm danh của bạn vừa được cập nhật', 'info');
+                await refreshAttendanceContent();
             });
         } catch(e) { console.warn('SignalR attendance error:', e); }
     })();

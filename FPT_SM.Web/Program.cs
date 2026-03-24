@@ -69,7 +69,9 @@ try
             {
                 _ = await db.Roles.AnyAsync();
             }
-            catch (Exception ex) when (ex.Message.Contains("doesn't exist", StringComparison.OrdinalIgnoreCase))
+            catch (Exception ex) when (
+                ex.ToString().Contains("doesn't exist", StringComparison.OrdinalIgnoreCase) ||
+                ex.ToString().Contains("1146", StringComparison.OrdinalIgnoreCase))
             {
                 ensureSchema = true;
             }
@@ -78,7 +80,35 @@ try
         if (ensureSchema)
         {
             Console.WriteLine("Ensuring database schema...");
-            await db.Database.EnsureCreatedAsync();
+            try
+            {
+                await db.Database.MigrateAsync();
+            }
+            catch (Exception migrateEx)
+            {
+                Console.WriteLine($"Migrate failed, fallback to EnsureCreated. Reason: {migrateEx.Message}");
+                await db.Database.EnsureCreatedAsync();
+            }
+
+            var rolesTableReady = false;
+            try
+            {
+                _ = await db.Roles.AnyAsync();
+                rolesTableReady = true;
+            }
+            catch (Exception ex) when (
+                ex.ToString().Contains("doesn't exist", StringComparison.OrdinalIgnoreCase) ||
+                ex.ToString().Contains("1146", StringComparison.OrdinalIgnoreCase))
+            {
+                rolesTableReady = false;
+            }
+
+            if (!rolesTableReady)
+            {
+                Console.WriteLine("Schema is incomplete (missing Roles table). Recreating database...");
+                await db.Database.EnsureDeletedAsync();
+                await db.Database.EnsureCreatedAsync();
+            }
         }
 
         await DbSeeder.SeedAsync(scope.ServiceProvider);

@@ -7,10 +7,12 @@ namespace FPT_SM.Web.Pages.Student.Attendance;
 public class IndexModel : BasePageModel
 {
     private readonly IAttendanceService _attendanceService;
+    private readonly ISemesterService _semesterService;
 
-    public IndexModel(IAttendanceService attendanceService)
+    public IndexModel(IAttendanceService attendanceService, ISemesterService semesterService)
     {
         _attendanceService = attendanceService;
+        _semesterService = semesterService;
     }
 
     public List<StudentAttendanceSummaryDto> AttendanceSummaries { get; set; } = new();
@@ -25,7 +27,8 @@ public class IndexModel : BasePageModel
         ViewData["UserInitial"] = CurrentFullName?.FirstOrDefault().ToString() ?? "S";
         ViewData["UserId"] = CurrentUserId;
 
-        AttendanceSummaries = await _attendanceService.GetStudentAttendanceAsync(CurrentUserId!.Value);
+        var currentSemester = await _semesterService.GetOngoingAsync();
+        AttendanceSummaries = await _attendanceService.GetStudentAttendanceAsync(CurrentUserId!.Value, currentSemester?.Id);
 
         return Page();
     }

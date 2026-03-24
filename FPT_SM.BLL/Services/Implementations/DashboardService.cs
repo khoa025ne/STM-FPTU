@@ -219,8 +219,10 @@ public class DashboardService : IDashboardService
     public async Task<StudentDashboardDto> GetStudentDashboardAsync(int studentId)
     {
         var currentSemester = await _semesterRepo.GetOngoingSemesterAsync();
-        var enrollments = await _enrollmentRepo.GetByStudentAsync(studentId,
-            currentSemester?.Id);
+        var enrollments = (await _enrollmentRepo.GetByStudentAsync(studentId,
+            currentSemester?.Id))
+            .Where(e => e.Status != 4)
+            .ToList();
 
         // Get enrollment eligibility (current program semester)
         var eligibility = await _enrollmentService.GetEnrollmentEligibilityAsync(studentId);

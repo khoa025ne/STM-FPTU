@@ -5,6 +5,7 @@ namespace FPT_SM.BLL.Services.Interfaces;
 
 public interface IAttendanceService
 {
+    Task<List<ClassAttendanceSessionDto>> GetClassAttendanceSessionsAsync(int classId);
     Task<AttendanceSheetDto?> GetAttendanceSheetAsync(int classId, DateTime date);
     Task<ServiceResult> MarkAttendanceAsync(MarkAttendanceDto dto, int teacherId);
     Task<ServiceResult> UpdateAttendanceAsync(int attendanceId, string status, string? note);
@@ -12,5 +13,5 @@ public interface IAttendanceService
     Task<StudentAttendanceSummaryDto?> GetEnrollmentAttendanceAsync(int enrollmentId);
     Task<List<AttendanceAlertDto>> GetAttendanceAlertsAsync(int classId);
     Task<List<AttendanceHistoryDto>> GetAttendanceHistoryAsync(int classId);
-    Task<(int ClassId, DateTime SlotDate)?> GetAttendanceInfoAsync(int attendanceId);
+    Task<(int ClassId, int StudentId, DateTime SlotDate, int SessionNumber)?> GetAttendanceInfoAsync(int attendanceId);
 }

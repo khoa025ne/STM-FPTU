@@ -25,12 +25,16 @@ public class IndexModel : BasePageModel
     public List<ClassDto> MyClasses { get; set; } = new();
     public AttendanceSheetDto? AttendanceSheet { get; set; }
     public List<AttendanceAlertDto> Alerts { get; set; } = new();
+    public List<ClassAttendanceSessionDto> SessionOptions { get; set; } = new();
 
     [BindProperty(SupportsGet = true, Name = "classId")]
     public int? SelectedClassId { get; set; }
     
     [BindProperty(SupportsGet = true, Name = "selectedDate")]
     public string? SelectedDate { get; set; }
+
+    [BindProperty(SupportsGet = true, Name = "selectedSession")]
+    public int? SelectedSession { get; set; }
     
     [BindProperty]
     public MarkAttendanceDto Dto { get; set; } = new();
@@ -58,17 +62,32 @@ public class IndexModel : BasePageModel
 
         if (SelectedClassId.HasValue)
         {
-            // Parse and validate date - use today if invalid or default date
-            var date = DateTime.Today;
-            if (!string.IsNullOrEmpty(SelectedDate) && DateTime.TryParse(SelectedDate, out var parsedDate))
+            SessionOptions = await _attendanceService.GetClassAttendanceSessionsAsync(SelectedClassId.Value);
+
+            DateTime date;
+            if (SelectedSession.HasValue)
             {
-                if (parsedDate.Year > 1) // Not default date (0001-01-01)
-                {
-                    date = parsedDate;
-                }
+                var selected = SessionOptions.FirstOrDefault(s => s.SessionNumber == SelectedSession.Value);
+                date = selected?.Date ?? DateTime.Today;
             }
-            
+            else if (!string.IsNullOrEmpty(SelectedDate) && DateTime.TryParse(SelectedDate, out var parsedDate))
+            {
+                date = SessionOptions.FirstOrDefault(s => s.Date.Date == parsedDate.Date)?.Date
+                    ?? parsedDate.Date;
+            }
+            else
+            {
+                date = SessionOptions.FirstOrDefault(s => s.Date.Date >= DateTime.Today)?.Date
+                    ?? SessionOptions.FirstOrDefault()?.Date
+                    ?? DateTime.Today;
+            }
+
+            SelectedDate = date.ToString("yyyy-MM-dd");
             AttendanceSheet = await _attendanceService.GetAttendanceSheetAsync(SelectedClassId.Value, date);
+            if (AttendanceSheet != null)
+            {
+                SelectedSession = AttendanceSheet.SessionNumber;
+            }
             Alerts = await _attendanceService.GetAttendanceAlertsAsync(SelectedClassId.Value);
         }
 
@@ -91,6 +110,24 @@ public class IndexModel : BasePageModel
                 message = "Điểm danh đã được cập nhật"
             });
 
+            var affectedStudentIds = Dto.Items
+                .Select(i => i.StudentId)
+                .Where(id => id > 0)
+                .Distinct()
+                .ToList();
+
+            foreach (var studentId in affectedStudentIds)
+            {
+                await _attendanceHub.Clients.Group($"student_{studentId}").SendAsync("AttendanceUpdated", new
+                {
+                    studentId,
+                    classId = Dto.ClassId,
+                    sessionNumber = Dto.SessionNumber,
+                    date = Dto.Date.ToString("yyyy-MM-dd"),
+                    message = "Điểm danh của bạn vừa được cập nhật"
+                });
+            }
+
             var alerts = await _attendanceService.GetAttendanceAlertsAsync(Dto.ClassId);
             foreach (var student in alerts.Where(a => a.IsFailed))
             {
@@ -111,7 +148,7 @@ public class IndexModel : BasePageModel
             TempData["Error"] = result.Message;
         }
 
-        return RedirectToPage(new { classId = Dto.ClassId, selectedDate = Dto.Date.ToString("yyyy-MM-dd") });
+        return RedirectToPage(new { classId = Dto.ClassId, selectedSession = Dto.SessionNumber });
     }
 
     public async Task<IActionResult> OnPostUpdateAttendanceAsync()
@@ -120,14 +157,24 @@ public class IndexModel : BasePageModel
         if (auth != null) return auth;
 
         var result = await _attendanceService.UpdateAttendanceAsync(EditAttendanceId, EditStatus, EditNote);
+        var attendanceInfo = await _attendanceService.GetAttendanceInfoAsync(EditAttendanceId);
 
         if (result.IsSuccess)
         {
-            await _attendanceHub.Clients.Group("students").SendAsync("AttendanceUpdated", new
+            if (attendanceInfo.HasValue)
             {
-                attendanceId = EditAttendanceId,
-                message = "Điểm danh của bạn đã được cập nhật"
-            });
+                var (classId, studentId, slotDate, sessionNumber) = attendanceInfo.Value;
+
+                await _attendanceHub.Clients.Group($"student_{studentId}").SendAsync("AttendanceUpdated", new
+                {
+                    studentId,
+                    attendanceId = EditAttendanceId,
+                    classId,
+                    sessionNumber,
+                    date = slotDate.ToString("yyyy-MM-dd"),
+                    message = "Điểm danh của bạn đã được cập nhật"
+                });
+            }
 
             TempData["Success"] = result.Message;
         }
@@ -136,12 +183,9 @@ public class IndexModel : BasePageModel
             TempData["Error"] = result.Message;
         }
 
-        // Get the attendance to find classId and date for redirect
-        var attendanceInfo = await _attendanceService.GetAttendanceInfoAsync(EditAttendanceId);
-        
         if (attendanceInfo.HasValue)
         {
-            var (classId, slotDate) = attendanceInfo.Value;
+            var (classId, _, slotDate, _) = attendanceInfo.Value;
             return RedirectToPage(new { classId = classId, selectedDate = slotDate.ToString("yyyy-MM-dd") });
         }
 

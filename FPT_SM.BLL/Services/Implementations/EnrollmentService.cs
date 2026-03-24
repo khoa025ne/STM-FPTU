@@ -120,6 +120,10 @@ public class EnrollmentService : IEnrollmentService
     {
         var student = await _userRepo.GetByIdAsync(studentId);
         if (student == null) return ServiceResult.Failure("Không tìm thấy sinh viên.");
+        if (dto.ClassIds == null || !dto.ClassIds.Any())
+            return ServiceResult.Failure("Vui lòng chọn ít nhất một lớp để đăng ký.");
+
+        dto.ClassIds = dto.ClassIds.Where(id => id > 0).Distinct().ToList();
 
         // Check enrollment eligibility
         var eligibility = await GetEnrollmentEligibilityAsync(studentId);
@@ -130,9 +134,17 @@ public class EnrollmentService : IEnrollmentService
         var classesToEnroll = new List<Class>();
         decimal totalCost = 0;
 
-        var existingEnrollments = await _enrollmentRepo.GetByStudentAsync(studentId, dto.SemesterId);
+        var existingEnrollments = (await _enrollmentRepo.GetByStudentAsync(studentId, dto.SemesterId)).ToList();
         if (existingEnrollments.Count() + dto.ClassIds.Count > 5)
             return ServiceResult.Failure("Không thể đăng ký quá 5 môn trong một học kỳ.");
+
+        var existingSlotIds = existingEnrollments
+            .Where(e => e.Status == 1 || e.Status == 2)
+            .Select(e => e.Class?.SlotId ?? 0)
+            .Where(id => id > 0)
+            .ToHashSet();
+
+        var selectedSubjectIds = new HashSet<int>();
 
         foreach (var classId in dto.ClassIds)
         {
@@ -144,6 +156,9 @@ public class EnrollmentService : IEnrollmentService
             if (await _enrollmentRepo.IsStudentEnrolledInSubjectAsync(studentId, cls.SubjectId, dto.SemesterId))
                 return ServiceResult.Failure($"Bạn đã đăng ký môn {cls.Subject?.Name} trong học kỳ này rồi.");
 
+            if (!selectedSubjectIds.Add(cls.SubjectId))
+                return ServiceResult.Failure($"Bạn chỉ được chọn 1 lớp cho mỗi môn trong một lần thanh toán. Môn {cls.Subject?.Name} đang bị chọn trùng.");
+
             // Validate program semester
             if (cls.Subject?.ProgramSemester != eligibility.PayableProgramSemester)
                 return ServiceResult.Failure($"Hiện tại bạn chỉ được thanh toán môn của kỳ {eligibility.PayableProgramSemester}.");
@@ -152,6 +167,9 @@ public class EnrollmentService : IEnrollmentService
                 return ServiceResult.Failure($"Bạn chưa hoàn thành môn tiên quyết của {cls.Subject?.Name}.");
 
             // Check schedule conflict with already enrolled
+            if (existingSlotIds.Contains(cls.SlotId))
+                return ServiceResult.Failure($"Lớp {cls.Name} bị trùng lịch với môn bạn đã đăng ký trước đó.");
+
             foreach (var existing in classesToEnroll)
             {
                 if (existing.SlotId == cls.SlotId)
@@ -193,17 +211,6 @@ public class EnrollmentService : IEnrollmentService
             await _context.SaveChangesAsync();
 
             _context.Grades.Add(new Grade { EnrollmentId = enrollment.Id, Status = 1 });
-
-            for (int i = 1; i <= 20; i++)
-            {
-                _context.Attendances.Add(new Attendance
-                {
-                    EnrollmentId = enrollment.Id,
-                    SlotDate = DateTime.Now.AddDays(i * 7),
-                    SessionNumber = i,
-                    Status = "Present"
-                });
-            }
 
             cls.Enrolled++;
             _context.Classes.Update(cls);

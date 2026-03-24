@@ -21,47 +21,78 @@ public class AttendanceService : IAttendanceService
         _context = context;
     }
 
+    public async Task<List<ClassAttendanceSessionDto>> GetClassAttendanceSessionsAsync(int classId)
+    {
+        var cls = await _context.Classes
+            .Include(c => c.Semester)
+            .Include(c => c.Slot)
+            .FirstOrDefaultAsync(c => c.Id == classId);
+
+        if (cls?.Semester == null || cls.Slot == null)
+            return new List<ClassAttendanceSessionDto>();
+
+        return BuildClassSessions(cls.Semester.StartDate.Date, cls.Semester.EndDate.Date, cls.Slot.DayOfWeek)
+            .Select(x => new ClassAttendanceSessionDto
+            {
+                SessionNumber = x.SessionNumber,
+                Date = x.Date
+            })
+            .ToList();
+    }
+
     public async Task<AttendanceSheetDto?> GetAttendanceSheetAsync(int classId, DateTime date)
     {
         var enrollments = await _enrollmentRepo.GetByClassAsync(classId);
         var activeEnrollments = enrollments.Where(e => e.Status is 2 or 3).ToList();
-        var cls = await _context.Classes.Include(c => c.Subject).Include(c => c.Semester).FirstOrDefaultAsync(c => c.Id == classId);
+        var cls = await _context.Classes
+            .Include(c => c.Subject)
+            .Include(c => c.Semester)
+            .Include(c => c.Slot)
+            .FirstOrDefaultAsync(c => c.Id == classId);
         if (cls == null) return null;
+        if (cls.Semester == null || cls.Slot == null) return null;
 
-        // Validate date - use today if invalid or default date (0001-01-01)
-        if (date.Year <= 1)
+        var sessionOptions = BuildClassSessions(
+            cls.Semester.StartDate.Date,
+            cls.Semester.EndDate.Date,
+            cls.Slot.DayOfWeek);
+
+        if (!sessionOptions.Any())
         {
-            date = DateTime.Today;
-        }
-        
-        // If semester exists, ensure date is within semester bounds
-        if (cls.Semester != null)
-        {
-            if (date < cls.Semester.StartDate)
-                date = cls.Semester.StartDate;
-            else if (date > cls.Semester.EndDate)
-                date = cls.Semester.EndDate;
+            return new AttendanceSheetDto
+            {
+                ClassId = classId,
+                ClassName = cls.Name,
+                SubjectName = cls.Subject?.Name ?? "",
+                Date = date.Date,
+                SessionNumber = 1,
+                TotalSessions = 0,
+                Attendances = new List<AttendanceDto>()
+            };
         }
 
-        // Calculate session number based on distinct dates before this date
-        var sessionNumber = await GetSessionNumberAsync(classId, date);
-        
-        // Total sessions should be based on the number of weeks in semester
-        // If semester is defined, calculate based on semester duration, otherwise default to 20
-        int totalSessions = 20; // Default
-        if (cls.Semester != null)
+        // Match exactly by schedule date; if not found, pick closest future then fallback to last.
+        var selectedSession = sessionOptions.FirstOrDefault(s => s.Date.Date == date.Date);
+        if (selectedSession == default)
         {
-            var semesterDays = (cls.Semester.EndDate.Date - cls.Semester.StartDate.Date).Days;
-            // Assuming 1 session per week (divide by 7)
-            totalSessions = Math.Max(1, (semesterDays / 7) + 1);
+            selectedSession = sessionOptions.FirstOrDefault(s => s.Date.Date >= DateTime.Today);
         }
+        if (selectedSession == default)
+        {
+            selectedSession = sessionOptions.Last();
+        }
+
+        var sessionNumber = selectedSession.SessionNumber;
+        var sessionDate = selectedSession.Date;
+        var totalSessions = sessionOptions.Count;
+        var isFutureSession = sessionDate.Date > DateTime.Today;
 
         var items = new List<AttendanceDto>();
 
         foreach (var e in activeEnrollments)
         {
             var attendance = await _context.Attendances.FirstOrDefaultAsync(a => 
-                a.EnrollmentId == e.Id && a.SlotDate.Date == date.Date && a.SessionNumber == sessionNumber);
+                a.EnrollmentId == e.Id && a.SlotDate.Date == sessionDate.Date && a.SessionNumber == sessionNumber);
             
             var absentCount = await _attendanceRepo.CountAbsentAsync(e.Id);
             items.Add(new AttendanceDto
@@ -71,11 +102,11 @@ public class AttendanceService : IAttendanceService
                 StudentId = e.StudentId,
                 StudentName = e.Student?.FullName ?? "",
                 StudentRollNumber = e.Student?.RollNumber,
-                SlotDate = date,
+                SlotDate = sessionDate,
                 SessionNumber = sessionNumber,
-                Status = attendance?.Status ?? "Present",
+                Status = attendance?.Status ?? (isFutureSession ? "Upcoming" : "Present"),
                 Note = attendance?.Note,
-                IsEditable = attendance == null || (DateTime.Now - attendance.SlotDate).TotalDays <= 14
+                IsEditable = !isFutureSession && (attendance == null || (DateTime.Now - attendance.SlotDate).TotalDays <= 14)
             });
         }
 
@@ -84,7 +115,7 @@ public class AttendanceService : IAttendanceService
             ClassId = classId,
             ClassName = cls.Name,
             SubjectName = cls.Subject?.Name ?? "",
-            Date = date,
+            Date = sessionDate,
             SessionNumber = sessionNumber,
             TotalSessions = totalSessions,
             Attendances = items
@@ -263,26 +294,64 @@ public class AttendanceService : IAttendanceService
     {
         var enrollments = await _enrollmentRepo.GetByStudentAsync(studentId, semesterId);
         var result = new List<StudentAttendanceSummaryDto>();
+        var today = DateTime.Today;
 
         foreach (var e in enrollments.Where(e => e.Status != 4))
         {
             var attendances = await _attendanceRepo.GetByEnrollmentAsync(e.Id);
-            var dtoList = attendances.Select(a => new AttendanceDto
-            {
-                Id = a.Id, EnrollmentId = a.EnrollmentId, SlotDate = a.SlotDate,
-                SessionNumber = a.SessionNumber, Status = a.Status, Note = a.Note, IsEditable = a.IsEditable
-            }).ToList();
+            var scheduleSessions = (e.Semester != null && e.Class?.Slot != null)
+                ? BuildClassSessions(e.Semester.StartDate.Date, e.Semester.EndDate.Date, e.Class.Slot.DayOfWeek)
+                : new List<(int SessionNumber, DateTime Date)>();
+
+            var attendanceByScheduleKey = attendances
+                .GroupBy(a => new { Date = a.SlotDate.Date, a.SessionNumber })
+                .ToDictionary(g => (g.Key.Date, g.Key.SessionNumber), g => g.OrderByDescending(x => x.Id).First());
+
+            var dtoList = scheduleSessions.Any()
+                ? scheduleSessions
+                    .Select(s =>
+                    {
+                        attendanceByScheduleKey.TryGetValue((s.Date.Date, s.SessionNumber), out var attendance);
+                        var isFutureSession = s.Date.Date > today;
+
+                        return new AttendanceDto
+                        {
+                            Id = attendance?.Id ?? 0,
+                            EnrollmentId = e.Id,
+                            SlotDate = s.Date,
+                            SessionNumber = s.SessionNumber,
+                            Status = attendance?.Status ?? (isFutureSession ? "Upcoming" : "Present"),
+                            Note = attendance?.Note,
+                            IsEditable = attendance?.IsEditable ?? false
+                        };
+                    })
+                    .ToList()
+                : attendances
+                    .Select(a => new AttendanceDto
+                    {
+                        Id = a.Id,
+                        EnrollmentId = a.EnrollmentId,
+                        SlotDate = a.SlotDate,
+                        SessionNumber = a.SessionNumber,
+                        Status = a.SlotDate.Date > today ? "Upcoming" : a.Status,
+                        Note = a.Note,
+                        IsEditable = a.IsEditable
+                    })
+                    .ToList();
+
+            var completedSessions = dtoList.Where(a => a.SlotDate.Date <= today).ToList();
 
             result.Add(new StudentAttendanceSummaryDto
             {
                 EnrollmentId = e.Id,
                 SubjectName = e.Class?.Subject?.Name ?? "",
                 SubjectCode = e.Class?.Subject?.Code ?? "",
-                TotalSessions = dtoList.Count,
-                PresentCount = dtoList.Count(a => a.Status == "Present"),
-                AbsentCount = dtoList.Count(a => a.Status == "Absent"),
-                LateCount = dtoList.Count(a => a.Status == "Late"),
-                ExcusedCount = dtoList.Count(a => a.Status == "Excused"),
+                ClassName = e.Class?.Name ?? "",
+                TotalSessions = completedSessions.Count,
+                PresentCount = completedSessions.Count(a => a.Status == "Present"),
+                AbsentCount = completedSessions.Count(a => a.Status == "Absent"),
+                LateCount = completedSessions.Count(a => a.Status == "Late"),
+                ExcusedCount = completedSessions.Count(a => a.Status == "Excused"),
                 Sessions = dtoList
             });
         }
@@ -294,22 +363,60 @@ public class AttendanceService : IAttendanceService
         var enrollment = await _enrollmentRepo.GetWithDetailsAsync(enrollmentId);
         if (enrollment == null) return null;
         var attendances = await _attendanceRepo.GetByEnrollmentAsync(enrollmentId);
-        var dtoList = attendances.Select(a => new AttendanceDto
-        {
-            Id = a.Id, EnrollmentId = a.EnrollmentId, SlotDate = a.SlotDate,
-            SessionNumber = a.SessionNumber, Status = a.Status, Note = a.Note, IsEditable = a.IsEditable
-        }).ToList();
+        var today = DateTime.Today;
+        var scheduleSessions = (enrollment.Semester != null && enrollment.Class?.Slot != null)
+            ? BuildClassSessions(enrollment.Semester.StartDate.Date, enrollment.Semester.EndDate.Date, enrollment.Class.Slot.DayOfWeek)
+            : new List<(int SessionNumber, DateTime Date)>();
+
+        var attendanceByScheduleKey = attendances
+            .GroupBy(a => new { Date = a.SlotDate.Date, a.SessionNumber })
+            .ToDictionary(g => (g.Key.Date, g.Key.SessionNumber), g => g.OrderByDescending(x => x.Id).First());
+
+        var dtoList = scheduleSessions.Any()
+            ? scheduleSessions
+                .Select(s =>
+                {
+                    attendanceByScheduleKey.TryGetValue((s.Date.Date, s.SessionNumber), out var attendance);
+                    var isFutureSession = s.Date.Date > today;
+
+                    return new AttendanceDto
+                    {
+                        Id = attendance?.Id ?? 0,
+                        EnrollmentId = enrollmentId,
+                        SlotDate = s.Date,
+                        SessionNumber = s.SessionNumber,
+                        Status = attendance?.Status ?? (isFutureSession ? "Upcoming" : "Present"),
+                        Note = attendance?.Note,
+                        IsEditable = attendance?.IsEditable ?? false
+                    };
+                })
+                .ToList()
+            : attendances
+                .Select(a => new AttendanceDto
+                {
+                    Id = a.Id,
+                    EnrollmentId = a.EnrollmentId,
+                    SlotDate = a.SlotDate,
+                    SessionNumber = a.SessionNumber,
+                    Status = a.SlotDate.Date > today ? "Upcoming" : a.Status,
+                    Note = a.Note,
+                    IsEditable = a.IsEditable
+                })
+                .ToList();
+
+        var completedSessions = dtoList.Where(a => a.SlotDate.Date <= today).ToList();
 
         return new StudentAttendanceSummaryDto
         {
             EnrollmentId = enrollmentId,
             SubjectName = enrollment.Class?.Subject?.Name ?? "",
             SubjectCode = enrollment.Class?.Subject?.Code ?? "",
-            TotalSessions = dtoList.Count,
-            PresentCount = dtoList.Count(a => a.Status == "Present"),
-            AbsentCount = dtoList.Count(a => a.Status == "Absent"),
-            LateCount = dtoList.Count(a => a.Status == "Late"),
-            ExcusedCount = dtoList.Count(a => a.Status == "Excused"),
+            ClassName = enrollment.Class?.Name ?? "",
+            TotalSessions = completedSessions.Count,
+            PresentCount = completedSessions.Count(a => a.Status == "Present"),
+            AbsentCount = completedSessions.Count(a => a.Status == "Absent"),
+            LateCount = completedSessions.Count(a => a.Status == "Late"),
+            ExcusedCount = completedSessions.Count(a => a.Status == "Excused"),
             Sessions = dtoList
         };
     }
@@ -371,17 +478,36 @@ public class AttendanceService : IAttendanceService
         return count + 1;
     }
 
-    public async Task<(int ClassId, DateTime SlotDate)?> GetAttendanceInfoAsync(int attendanceId)
+    private static List<(int SessionNumber, DateTime Date)> BuildClassSessions(DateTime semesterStart, DateTime semesterEnd, int slotDayOfWeek)
+    {
+        var targetDay = (DayOfWeek)Math.Clamp(slotDayOfWeek - 1, 0, 6);
+        var start = semesterStart.Date;
+        var end = semesterEnd.Date;
+
+        var daysUntilTarget = ((int)targetDay - (int)start.DayOfWeek + 7) % 7;
+        var first = start.AddDays(daysUntilTarget);
+
+        var sessions = new List<(int SessionNumber, DateTime Date)>();
+        var sessionNumber = 1;
+        for (var current = first; current <= end; current = current.AddDays(7))
+        {
+            sessions.Add((sessionNumber++, current));
+        }
+
+        return sessions;
+    }
+
+    public async Task<(int ClassId, int StudentId, DateTime SlotDate, int SessionNumber)?> GetAttendanceInfoAsync(int attendanceId)
     {
         var attendance = await _context.Attendances
             .Include(a => a.Enrollment)
             .Where(a => a.Id == attendanceId)
-            .Select(a => new { a.Enrollment.ClassId, a.SlotDate })
+            .Select(a => new { a.Enrollment.ClassId, a.Enrollment.StudentId, a.SlotDate, a.SessionNumber })
             .FirstOrDefaultAsync();
 
         if (attendance == null)
             return null;
 
-        return (attendance.ClassId, attendance.SlotDate);
+        return (attendance.ClassId, attendance.StudentId, attendance.SlotDate, attendance.SessionNumber);
     }
 }
