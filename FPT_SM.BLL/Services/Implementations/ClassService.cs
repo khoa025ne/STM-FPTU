@@ -12,12 +12,14 @@ public class ClassService : IClassService
 {
     private readonly IClassRepository _classRepo;
     private readonly ISlotRepository _slotRepo;
+    private readonly ISemesterRepository _semesterRepo;
     private readonly AppDbContext _context;
 
-    public ClassService(IClassRepository classRepo, ISlotRepository slotRepo, AppDbContext context)
+    public ClassService(IClassRepository classRepo, ISlotRepository slotRepo, ISemesterRepository semesterRepo, AppDbContext context)
     {
         _classRepo = classRepo;
         _slotRepo = slotRepo;
+        _semesterRepo = semesterRepo;
         _context = context;
     }
 
@@ -41,6 +43,19 @@ public class ClassService : IClassService
         var classes = semesterId.HasValue
             ? await _classRepo.GetByTeacherAndSemesterAsync(teacherId, semesterId.Value)
             : await _classRepo.GetByTeacherAsync(teacherId);
+        return classes.Select(MapToDto).ToList();
+    }
+
+    /// <summary>
+    /// Lấy danh sách lớp của giáo viên trong kỳ đang diễn ra (Status = 2)
+    /// Dùng cho chức năng điểm danh và chấm điểm
+    /// </summary>
+    public async Task<List<ClassDto>> GetByTeacherInOngoingSemesterAsync(int teacherId)
+    {
+        var ongoingSemester = await _semesterRepo.GetOngoingSemesterAsync();
+        if (ongoingSemester == null) return new List<ClassDto>();
+        
+        var classes = await _classRepo.GetByTeacherAndSemesterAsync(teacherId, ongoingSemester.Id);
         return classes.Select(MapToDto).ToList();
     }
 

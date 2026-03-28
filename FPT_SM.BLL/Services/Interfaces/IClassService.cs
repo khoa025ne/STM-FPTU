@@ -8,6 +8,7 @@ public interface IClassService
     Task<List<ClassDto>> GetAllAsync(int? semesterId = null, int? subjectId = null, int? status = null);
     Task<ClassDto?> GetByIdAsync(int id);
     Task<List<ClassDto>> GetByTeacherAsync(int teacherId, int? semesterId = null);
+    Task<List<ClassDto>> GetByTeacherInOngoingSemesterAsync(int teacherId);
     Task<ServiceResult<ClassDto>> CreateAsync(CreateClassDto dto);
     Task<ServiceResult<ClassDto>> UpdateAsync(int id, UpdateClassDto dto);
     Task<ServiceResult> DeleteAsync(int id);

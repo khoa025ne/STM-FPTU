@@ -61,7 +61,8 @@ public class IndexModel : BasePageModel
         ViewData["UserInitial"] = CurrentFullName?.FirstOrDefault().ToString() ?? "T";
         ViewData["UserId"] = CurrentUserId;
 
-        MyClasses = await _classService.GetByTeacherAsync(CurrentUserId!.Value);
+        // Chỉ hiển thị các lớp của giáo viên trong kỳ đang diễn ra
+        MyClasses = await _classService.GetByTeacherInOngoingSemesterAsync(CurrentUserId!.Value);
 
         if (SelectedClassId.HasValue)
         {

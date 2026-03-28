@@ -439,6 +439,95 @@ public static class DbSeeder
             await context.SaveChangesAsync();
         }
 
+        // ==================== SEED SPRING 2026 CLASSES ====================
+        var sp26ClassExists = await context.Classes.AnyAsync(c => c.Semester.Code == "SP26");
+        if (!sp26ClassExists)
+        {
+            var sp26 = await context.Semesters.FirstAsync(s => s.Code == "SP26");
+            var teachers = await context.Users.Where(u => u.RoleId == 3).ToListAsync();
+            var subjects = await context.Subjects.OrderBy(s => s.ProgramSemester).ThenBy(s => s.Code).Take(5).ToListAsync();
+            var slots = await context.Slots.ToListAsync();
+
+            var classes = new List<Class>();
+            for (int i = 0; i < subjects.Count; i++)
+            {
+                var subject = subjects[i];
+                for (int section = 1; section <= 2; section++)
+                {
+                    var teacher = teachers[(i + section - 1) % teachers.Count];
+                    var slot = slots[(i * 2 + section - 1) % slots.Count];
+                    var capacity = section == 1 ? 30 : 25;
+                    var enrolled = Math.Min(capacity - 2, 2 + ((i + section) % 5));
+
+                    classes.Add(new Class
+                    {
+                        Name = $"{subject.Code}_C{section:00}",
+                        SubjectId = subject.Id,
+                        TeacherId = teacher.Id,
+                        SemesterId = sp26.Id,
+                        SlotId = slot.Id,
+                        Capacity = capacity,
+                        Enrolled = enrolled,
+                        Status = 1, // Upcoming
+                        RoomNumber = $"B{2 + (i % 3)}.{(i + section):00}"
+                    });
+                }
+            }
+
+            context.Classes.AddRange(classes);
+            await context.SaveChangesAsync();
+        }
+
+        // ==================== SEED SPRING 2026 ENROLLMENTS ====================
+        var sp26EnrollmentExists = await context.Enrollments.AnyAsync(e => e.Semester.Code == "SP26");
+        if (!sp26EnrollmentExists)
+        {
+            var sp26 = await context.Semesters.FirstAsync(s => s.Code == "SP26");
+            var students = await context.Users.Where(u => u.RoleId == 4).ToListAsync();
+            var sp26Classes = await context.Classes
+                .Include(c => c.Semester)
+                .Where(c => c.Semester.Code == "SP26")
+                .OrderBy(c => c.Id)
+                .ToListAsync();
+
+            var enrollmentList = new List<Enrollment>();
+
+            // Enrollment Matrix for Spring 2026 - 10 classes total (5 subjects × 2 classes each)
+            var enrollmentMatrix = new Dictionary<int, List<int>>
+            {
+                { 0, new List<int> { 0, 2, 4, 6 } },     // student01 -> classes 0,2,4,6
+                { 1, new List<int> { 0, 1, 3, 5 } },     // student02 -> classes 0,1,3,5
+                { 2, new List<int> { 1, 2, 5, 7 } },     // student03 -> classes 1,2,5,7
+                { 3, new List<int> { 3, 6, 8 } },        // student04 -> classes 3,6,8
+                { 4, new List<int> { 2, 4, 7, 9 } },     // student05 -> classes 2,4,7,9
+                { 5, new List<int> { 1, 5, 8 } },        // student06 -> classes 1,5,8
+                { 6, new List<int> { 3, 4, 6, 9 } },     // student07 -> classes 3,4,6,9
+                { 7, new List<int> { 0, 2, 8, 9 } }      // student08 -> classes 0,2,8,9
+            };
+
+            foreach (var studentIdx in enrollmentMatrix.Keys)
+            {
+                foreach (var classIdx in enrollmentMatrix[studentIdx])
+                {
+                    if (classIdx < sp26Classes.Count)
+                    {
+                        var enrollment = new Enrollment
+                        {
+                            StudentId = students[studentIdx].Id,
+                            ClassId = sp26Classes[classIdx].Id,
+                            SemesterId = sp26.Id,
+                            Status = 1, // Upcoming
+                            EnrolledAt = DateTime.Now
+                        };
+                        enrollmentList.Add(enrollment);
+                    }
+                }
+            }
+
+            await context.Enrollments.AddRangeAsync(enrollmentList);
+            await context.SaveChangesAsync();
+        }
+
         // ==================== SEED QUIZZES ====================
         if (!await context.Quizzes.AnyAsync())
         {
@@ -676,8 +765,20 @@ public static class DbSeeder
                 }
             }
 
-            // Add transactions for 2024 and 2025 across all months
+            // Add transactions for 2021-2026 across all months for comprehensive demo data
             var yearMonthRanges = new List<(int year, int month)>();
+            
+            // 2021: Jan-Dec
+            for (int m = 1; m <= 12; m++)
+                yearMonthRanges.Add((2021, m));
+            
+            // 2022: Jan-Dec
+            for (int m = 1; m <= 12; m++)
+                yearMonthRanges.Add((2022, m));
+            
+            // 2023: Jan-Dec
+            for (int m = 1; m <= 12; m++)
+                yearMonthRanges.Add((2023, m));
             
             // 2024: Jan-Dec
             for (int m = 1; m <= 12; m++)
@@ -704,55 +805,81 @@ public static class DbSeeder
                     if (transactionDate > DateTime.Now)
                         continue;
 
-                    // Ensure at least one deposit per month for student (90% chance)
-                    if (random.Next(0, 100) < 90)
+                    // Generate 3-5 deposits per month for more revenue data
+                    int depositCount = random.Next(3, 6);
+                    for (int d = 0; d < depositCount; d++)
                     {
-                        transactions.Add(new Transaction
+                        var depositDay = random.Next(1, Math.Min(28, daysInMonth) + 1);
+                        var depositDate = new DateTime(year, month, depositDay);
+                        
+                        if (depositDate <= DateTime.Now)
                         {
-                            UserId = student.Id,
-                            Amount = random.Next(5000000, 10000000),
-                            Type = "Deposit",
-                            Status = "Success",
-                            Description = "Nạp tiền vào ví",
-                            VnPayTransactionId = $"VNP{year}{month:D2}{day:D2}{random.Next(1000, 9999)}",
-                            CreatedAt = transactionDate
-                        });
+                            transactions.Add(new Transaction
+                            {
+                                UserId = student.Id,
+                                Amount = random.Next(5000000, 15000000),
+                                Type = "Deposit",
+                                Status = "Success",
+                                Description = "Nạp tiền vào ví",
+                                VnPayTransactionId = $"VNP{year}{month:D2}{depositDay:D2}{random.Next(10000, 99999)}",
+                                CreatedAt = depositDate
+                            });
+                        }
                     }
 
-                    // Tuition payment (60% chance each month)
-                    if (random.Next(0, 100) < 60)
+                    // Tuition payment (65% chance, 2-3 times per month)
+                    if (random.Next(0, 100) < 65)
                     {
-                        var subjects = new[] { "PRX101", "PRO102", "DBI202", "WED201", "SWA201" };
-                        transactions.Add(new Transaction
+                        int paymentCount = random.Next(2, 4);
+                        var subjects = new[] { "PRX101", "PRO102", "DBI202", "WED201", "SWA201", "DSA301", "WED202", "NET201", "MOB201" };
+                        
+                        for (int p = 0; p < paymentCount; p++)
                         {
-                            UserId = student.Id,
-                            Amount = random.Next(3000000, 5000000),
-                            Type = "TuitionPayment",
-                            Status = "Success",
-                            Description = $"Thanh toán học phí {subjects[random.Next(subjects.Length)]}",
-                            OrderId = $"ORD{year}{month:D2}{day:D2}{random.Next(1000, 9999)}",
-                            CreatedAt = transactionDate
-                        });
+                            var paymentDay = random.Next(1, Math.Min(28, daysInMonth) + 1);
+                            var paymentDate = new DateTime(year, month, paymentDay);
+                            
+                            if (paymentDate <= DateTime.Now)
+                            {
+                                transactions.Add(new Transaction
+                                {
+                                    UserId = student.Id,
+                                    Amount = random.Next(3000000, 8000000),
+                                    Type = "TuitionPayment",
+                                    Status = "Success",
+                                    Description = $"Thanh toán học phí {subjects[random.Next(subjects.Length)]}",
+                                    OrderId = $"ORD{year}{month:D2}{paymentDay:D2}{random.Next(10000, 99999)}",
+                                    CreatedAt = paymentDate
+                                });
+                            }
+                        }
                     }
 
-                    // Refund transaction (15% chance)
-                    if (random.Next(0, 100) < 15)
+                    // Refund transaction (20% chance)
+                    if (random.Next(0, 100) < 20)
                     {
-                        transactions.Add(new Transaction
+                        var refundDay = random.Next(1, Math.Min(28, daysInMonth) + 1);
+                        var refundDate = new DateTime(year, month, refundDay);
+                        
+                        if (refundDate <= DateTime.Now)
                         {
-                            UserId = student.Id,
-                            Amount = random.Next(500000, 2000000),
-                            Type = "Refund",
-                            Status = "Success",
-                            Description = "Hoàn tiền hủy đăng ký môn học",
-                            CreatedAt = transactionDate
-                        });
+                            transactions.Add(new Transaction
+                            {
+                                UserId = student.Id,
+                                Amount = random.Next(1000000, 3000000),
+                                Type = "Refund",
+                                Status = "Success",
+                                Description = "Hoàn tiền hủy đăng ký môn học",
+                                CreatedAt = refundDate
+                            });
+                        }
                     }
                 }
 
-                // Add recent transactions for current period (5-7 deposits for current month)
-                for (int i = 0; i < 6; i++)
+                // Add extensive recent transactions for current period (10-15 transactions for current month)
+                var March2026 = new DateTime(2026, 3, 1);
+                for (int i = 0; i < 10; i++)
                 {
+                    var dayOffset = random.Next(1, 26);
                     transactions.Add(new Transaction
                     {
                         UserId = student.Id,
@@ -760,8 +887,25 @@ public static class DbSeeder
                         Type = "Deposit",
                         Status = "Success",
                         Description = "Nạp tiền vào ví",
-                        VnPayTransactionId = $"VNP{DateTime.Now.Ticks}{random.Next(100, 999)}",
-                        CreatedAt = DateTime.Now.AddDays(-random.Next(1, 15))
+                        VnPayTransactionId = $"VNP{DateTime.Now.Ticks}{i:D4}",
+                        CreatedAt = March2026.AddDays(dayOffset)
+                    });
+                }
+                
+                // Add current month tuition payments
+                for (int i = 0; i < 3; i++)
+                {
+                    var dayOffset = random.Next(1, 26);
+                    var subjects = new[] { "PRX101", "PRO102", "DBI202", "WED201", "SWA201", "DSA301" };
+                    transactions.Add(new Transaction
+                    {
+                        UserId = student.Id,
+                        Amount = random.Next(3000000, 6000000),
+                        Type = "TuitionPayment",
+                        Status = "Success",
+                        Description = $"Thanh toán học phí {subjects[random.Next(subjects.Length)]}",
+                        OrderId = $"ORD{DateTime.Now.Ticks}{i:D4}",
+                        CreatedAt = March2026.AddDays(dayOffset)
                     });
                 }
             }
